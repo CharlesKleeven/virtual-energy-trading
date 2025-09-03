@@ -28,12 +28,12 @@ interface BidEntryProps {
 const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) => {
   const [form] = Form.useForm();
   const [bids, setBids] = useState<Bid[]>([]);
-  const [tradingDay, setTradingDay] = useState<Dayjs>(dayjs());
+  const [tradingDay, setTradingDay] = useState<Dayjs | null>(null);
   const [selectedHours, setSelectedHours] = useState<number[]>([]);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
 
   const isPastCutoff = () => {
-    if (!tradingDay.isSame(dayjs(), 'day')) return false;
+    if (!tradingDay || !tradingDay.isSame(dayjs(), 'day')) return false;
     const cutoff = dayjs().hour(11).minute(0).second(0);
     return dayjs().isAfter(cutoff);
   };
@@ -70,30 +70,51 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
   });
 
   const handleAddBid = () => {
-    form.validate().then((values) => {
-      const hours = selectedHours.length > 0 ? selectedHours : [values.hour_slot];
-      const newBids = hours.map(hour => ({
-        hour_slot: hour,
-        price: values.price,
-        quantity: values.quantity,
-      }));
+    // Manual validation with friendly messages
+    const price = form.getFieldValue('price');
+    const quantity = form.getFieldValue('quantity');
+    const hourSlot = form.getFieldValue('hour_slot');
+    
+    const missingFields = [];
+    if (!tradingDay) missingFields.push('trading day');
+    if (!price || price <= 0) missingFields.push('price');
+    if (!quantity || quantity <= 0) missingFields.push('quantity');
+    if (selectedHours.length === 0 && !hourSlot && hourSlot !== 0) missingFields.push('hour slot');
+    
+    if (missingFields.length > 0) {
+      const fieldsList = missingFields.join(', ').replace(/,([^,]*)$/, ' and$1');
+      showNotification('warning', `Please select ${fieldsList} to add a bid`);
+      return;
+    }
+    
+    // Create bids
+    const hours = selectedHours.length > 0 ? selectedHours : [hourSlot];
+    const newBids = hours.map(hour => ({
+      hour_slot: hour,
+      price: price,
+      quantity: quantity,
+    }));
 
-      const hourCounts: Record<number, number> = {};
-      [...bids, ...newBids].forEach(bid => {
-        hourCounts[bid.hour_slot] = (hourCounts[bid.hour_slot] || 0) + 1;
-      });
-
-      for (const [hour, count] of Object.entries(hourCounts)) {
-        if (count > 10) {
-          showNotification('warning', `Maximum 10 bids allowed for hour ${hour}`);
-          return;
-        }
-      }
-
-      setBids([...bids, ...newBids]);
-      form.resetFields(['price', 'quantity']);
-      setSelectedHours([]);
+    // Check bid limits
+    const hourCounts: Record<number, number> = {};
+    [...bids, ...newBids].forEach(bid => {
+      hourCounts[bid.hour_slot] = (hourCounts[bid.hour_slot] || 0) + 1;
     });
+
+    for (const [hour, count] of Object.entries(hourCounts)) {
+      if (count > 10) {
+        showNotification('warning', `Maximum 10 bids allowed for hour ${hour}`);
+        return;
+      }
+    }
+
+    // Add bids successfully
+    setBids([...bids, ...newBids]);
+    form.resetFields(['price', 'quantity']);
+    setSelectedHours([]);
+    
+    const bidCount = newBids.length;
+    showNotification('success', `Added ${bidCount} bid${bidCount > 1 ? 's' : ''} successfully`);
   };
 
   const handleRemoveBid = (index: number) => {
@@ -108,6 +129,11 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
 
     if (isPastCutoff()) {
       showNotification('error', 'Cannot submit bids after 11:00 AM for same-day trading');
+      return;
+    }
+
+    if (!tradingDay) {
+      showNotification('error', 'Please select a trading day before submitting bids');
       return;
     }
 
@@ -214,13 +240,13 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
         <FormItem
           label="Trading Day"
           field="trading_day"
-          rules={[{ required: true, message: 'Please select trading day' }]}
         >
           <DatePicker
             style={{ width: '100%' }}
-            value={tradingDay}
-            onChange={(dateString, date) => date && setTradingDay(date)}
+            value={tradingDay || undefined}
+            onChange={(dateString, date) => setTradingDay(date || null)}
             disabledDate={(date) => date && date.isBefore(dayjs(), 'day')}
+            placeholder="Select trading day"
           />
         </FormItem>
 
@@ -234,7 +260,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
         <FormItem
           label="Hour Slot(s)"
           field="hour_slot"
-          rules={[{ required: true, message: 'Please select hour slot' }]}
         >
           <Select
             placeholder="Select hour(s)"
@@ -255,10 +280,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
         <FormItem
           label="Bid Price ($/MWh)"
           field="price"
-          rules={[
-            { required: true, message: 'Please enter price' },
-            { type: 'number', min: 0.01, message: 'Price must be positive' },
-          ]}
         >
           <InputNumber
             placeholder="Enter price"
@@ -274,10 +295,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
         <FormItem
           label="Quantity (MWh)"
           field="quantity"
-          rules={[
-            { required: true, message: 'Please enter quantity' },
-            { type: 'number', min: 0.1, message: 'Quantity must be at least 0.1' },
-          ]}
         >
           <InputNumber
             placeholder="Enter quantity"

@@ -18,7 +18,7 @@ import {
   IconDownload, 
   IconRefresh
 } from '@arco-design/web-react/icon';
-import { useQuery, useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { tradingAPI, wsManager } from '../../services/api';
 import { Position, PnLCalculation } from '../../types/trading';
@@ -41,16 +41,7 @@ const PositionsTable: React.FC = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Fetch P&L for all positions - DISABLED due to backend 500 errors
-  // TODO: Re-enable when backend P&L endpoint is fixed
-  const pnlQueries = useQueries({
-    queries: positions.map((position: Position) => ({
-      queryKey: ['pnl', position.id],
-      queryFn: () => tradingAPI.calculatePositionPnL(position.id),
-      refetchInterval: 60000, // Refresh every minute
-      enabled: false, // Disabled - backend returns 500 errors
-    })),
-  });
+  // P&L API disabled due to backend 500 errors - using mock calculations instead
 
   // Subscribe to WebSocket price updates
   useEffect(() => {
