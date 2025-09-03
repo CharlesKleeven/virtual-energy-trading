@@ -165,33 +165,3 @@
 .stat-change.negative { color: #f44336; }
 .stat-change.neutral { color: #999; }
 
-/* Fix brush/timeline visibility */
-.recharts-brush-slide {
-  fill: rgba(255, 255, 255, 0.15) !important;
-  stroke: #bbb !important;
-}
-
-.recharts-brush-texts text {
-  fill: white !important;
-  font-size: 10px !important;
-}
-
-.recharts-brush .recharts-brush-traveller {
-  stroke: #ccc !important;
-  fill: #555 !important;
-}
-
-.timeline-instructions {
-  text-align: center;
-  font-size: 10px;
-  color: #999;
-  margin: 8px 0 4px 0;
-  font-weight: 400;
-}
-
-.chart-timeline {
-  margin-top: 4px;
-  padding: 0 8px;
-  background: #0f0f0f;
-  border-radius: 4px;
-}

@@ -15,12 +15,11 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Brush,
   ReferenceLine,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@arco-design/web-react';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { marketAPI } from '../../services/api';
 import './PriceChart.css';
 
@@ -32,23 +31,21 @@ interface PriceChartProps {
 const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) => {
   const [viewMode, setViewMode] = React.useState<'dam' | 'rtm' | 'both'>('both');
   const [timeframe, setTimeframe] = React.useState<'1D' | '7D' | '30D'>('7D');
-  const [zoomDomain, setZoomDomain] = React.useState<[string, string] | undefined>(undefined);
-  const dateRange = React.useMemo(() => [
-    subDays(new Date(), 7),
-    new Date()
-  ], []);
 
+  // Get days based on timeframe
+  const days = timeframe === '1D' ? 1 : timeframe === '7D' ? 7 : 30;
+  
   // Fetch DAM prices
   const { data: damPrices, isLoading: damLoading } = useQuery({
-    queryKey: ['dam-prices', dateRange],
-    queryFn: () => marketAPI.getDayAheadPrices(7),
+    queryKey: ['dam-prices', days],
+    queryFn: () => marketAPI.getDayAheadPrices(days),
     refetchInterval: 300000, // 5 minutes
   });
 
   // Fetch RTM prices
   const { data: rtmPrices, isLoading: rtmLoading } = useQuery({
-    queryKey: ['rtm-prices', dateRange],
-    queryFn: () => marketAPI.getRealtimePrices(24),
+    queryKey: ['rtm-prices', days],
+    queryFn: () => marketAPI.getRealtimePrices(days * 24),
     refetchInterval: 300000, // 5 minutes
   });
 
@@ -91,8 +88,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
           ...existing,
           time: hourKey,
           rtmPrice: avg,
-          rtmMin: Math.min(...prices),
-          rtmMax: Math.max(...prices),
         });
       });
     }
@@ -103,13 +98,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
     );
   }, [damPrices, rtmPrices, viewMode]);
 
-  // Filter chart data based on zoom domain
-  const displayData = useMemo(() => {
-    if (!zoomDomain) return chartData;
-    return chartData.filter(item => 
-      item.time >= zoomDomain[0] && item.time <= zoomDomain[1]
-    );
-  }, [chartData, zoomDomain]);
+
 
   // Enhanced tooltip with professional styling
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -144,20 +133,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
     }
   };
 
-  // Handle brush change for zooming
-  const handleBrushChange = (brushData: any) => {
-    if (brushData && brushData.startIndex !== undefined && brushData.endIndex !== undefined) {
-      const startIdx = Math.max(0, brushData.startIndex);
-      const endIdx = Math.min(chartData.length - 1, brushData.endIndex);
-      const start = chartData[startIdx]?.time;
-      const end = chartData[endIdx]?.time;
-      if (start && end) {
-        setZoomDomain([start, end]);
-      }
-    } else {
-      setZoomDomain(undefined);
-    }
-  };
 
   // Loading state
   if (damLoading || rtmLoading) {
@@ -205,7 +180,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
       <div className="chart-wrapper">
         <ResponsiveContainer width="100%" height="100%">
         <LineChart
-          data={displayData}
+          data={chartData}
           margin={{ top: 20, right: 30, left: 80, bottom: 90 }}
           onClick={handleChartClick}
         >
@@ -279,43 +254,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
         </ResponsiveContainer>
       </div>
 
-      {/* Timeline Instructions */}
-      <div className="timeline-instructions">
-        Zoom: Drag timeline to select date range
-      </div>
-
-      {/* Separate Timeline/Brush */}
-      <div className="chart-timeline">
-        <ResponsiveContainer width="100%" height={40}>
-          <LineChart
-            data={chartData}
-            margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-          >
-            <Line 
-              type="monotone" 
-              dataKey="damPrice" 
-              stroke="#3861FB" 
-              strokeWidth={1}
-              dot={false}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="rtmPrice" 
-              stroke="#0ECB81" 
-              strokeWidth={1}
-              dot={false}
-            />
-            <Brush
-              dataKey="time"
-              height={30}
-              stroke="#999"
-              fill="#444"
-              startIndex={Math.max(0, chartData.length - 24)}
-              onChange={handleBrushChange}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
 
       {/* Enhanced Price Statistics */}
       <div className="price-stats">
