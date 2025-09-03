@@ -51,36 +51,34 @@
 
 .view-mode-selector {
   display: flex;
-  gap: 2px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .view-mode-btn {
-  padding: 8px 14px;
+  padding: 8px 16px;
   border: none;
   background: transparent;
-  color: #ccc;
+  color: #999;
   font-size: 11px;
   font-weight: 500;
-  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.5px;
+  border-bottom: 2px solid transparent;
+  position: relative;
 }
 
 .view-mode-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  color: #ccc;
+  border-bottom-color: rgba(255, 255, 255, 0.3);
 }
 
 .view-mode-btn.active {
-  background: #ffd700;
-  color: #0a0a0a;
+  color: #ffd700;
+  border-bottom-color: #ffd700;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
 }
 
 .chart-info {
@@ -92,7 +90,31 @@
   height: 400px;
   background: #111;
   border: 1px solid #333;
-  border-radius: 4px;
+  border-radius: 12px;
+}
+
+.price-chart-tooltip {
+  background: rgba(18, 18, 18, 0.95) !important;
+  border: 1px solid #555 !important;
+  border-radius: 6px !important;
+  padding: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.price-chart-tooltip .label {
+  color: white !important;
+  font-weight: 600 !important;
+  margin-bottom: 4px !important;
+}
+
+.price-chart-tooltip .price-line {
+  margin: 2px 0 !important;
+}
+
+.price-chart-tooltip .hour {
+  color: #ccc !important;
+  border-top-color: #555 !important;
 }
 
 .price-stats {
@@ -103,7 +125,7 @@
   padding: 16px;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .stat-label {

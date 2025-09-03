@@ -182,10 +182,10 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
         <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 20, right: 30, left: 80, bottom: 60 }}
+          margin={{ top: 30, right: 40, left: 90, bottom: 70 }}
           onClick={handleChartClick}
         >
-          <CartesianGrid strokeDasharray="2 2" stroke="#1e222d" opacity={0.4} />
+          <CartesianGrid strokeDasharray="1 1" stroke="#444" opacity={0.3} />
           <XAxis 
             dataKey="time" 
             angle={0}
