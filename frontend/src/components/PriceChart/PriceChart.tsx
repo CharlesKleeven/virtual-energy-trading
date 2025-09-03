@@ -19,7 +19,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton, Radio } from '@arco-design/web-react';
+import { Skeleton } from '@arco-design/web-react';
 import { format, parseISO, subDays } from 'date-fns';
 import { marketAPI } from '../../services/api';
 import './PriceChart.css';
@@ -324,14 +324,14 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
           <div className="stat-value">
             ${Math.round(damPrices?.[damPrices.length - 1]?.price || 0) || '--'}
           </div>
-          <div className="stat-change positive">+2%</div>
+          <div className="stat-change neutral">24H</div>
         </div>
         <div className="stat">
           <div className="stat-label">Latest RTM</div>
           <div className="stat-value">
             ${Math.round(rtmPrices?.[rtmPrices.length - 1]?.price || 0) || '--'}
           </div>
-          <div className="stat-change negative">-2%</div>
+          <div className="stat-change neutral">5MIN</div>
         </div>
         <div className="stat">
           <div className="stat-label">Spread</div>
@@ -346,7 +346,12 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
         <div className="stat">
           <div className="stat-label">Range</div>
           <div className="stat-value">
-            ${Math.round(Math.min(...(damPrices?.map(p => p.price) || [0])))}-${Math.round(Math.max(...(damPrices?.map(p => p.price) || [0])))}
+            {(() => {
+              const prices = damPrices?.map(p => p.price) || [0];
+              const min = Math.round(Math.min(...prices));
+              const max = Math.round(Math.max(...prices));
+              return `$${min}-${max}`;
+            })()}
           </div>
           <div className="stat-change neutral">24H</div>
         </div>

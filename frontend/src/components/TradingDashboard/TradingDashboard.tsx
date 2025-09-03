@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Grid, Space, ConfigProvider } from '@arco-design/web-react';
+import { Layout, ConfigProvider } from '@arco-design/web-react';
 import enUS from '@arco-design/web-react/es/locale/en-US';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@arco-design/web-react/dist/css/arco.css';
@@ -19,7 +19,6 @@ import { wsManager } from '../../services/api';
 import './TradingDashboard.css';
 
 const { Header, Content } = Layout;
-const { Row, Col } = Grid;
 
 // Create Query Client for data fetching
 const queryClient = new QueryClient({

@@ -114,6 +114,7 @@ export const tradingAPI = {
 class WebSocketManager {
   private ws: WebSocket | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private pingInterval: NodeJS.Timeout | null = null;
   private listeners: Map<string, Set<Function>> = new Map();
 
   /**
@@ -128,7 +129,7 @@ class WebSocketManager {
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         // Send ping every 30 seconds to keep connection alive
-        setInterval(() => {
+        this.pingInterval = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send('ping');
           }
@@ -206,6 +207,11 @@ class WebSocketManager {
   disconnect() {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
     if (this.ws) {
       this.ws.close();

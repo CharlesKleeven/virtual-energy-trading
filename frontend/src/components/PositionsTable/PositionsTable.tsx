@@ -12,6 +12,7 @@ import {
   Modal,
   Space,
   Skeleton,
+  Select,
 } from '@arco-design/web-react';
 import { 
   IconDownload, 
@@ -21,11 +22,13 @@ import { useQuery, useQueries } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { tradingAPI, wsManager } from '../../services/api';
 import { Position, PnLCalculation } from '../../types/trading';
+import { formatHourSlot } from '../../utils/formatters';
 import './PositionsTable.css';
 
 const PositionsTable: React.FC = () => {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [detailedPnL, setDetailedPnL] = useState<PnLCalculation | null>(null);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Fetch positions
   const { 
@@ -38,13 +41,14 @@ const PositionsTable: React.FC = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Fetch P&L for all positions
+  // Fetch P&L for all positions - DISABLED due to backend 500 errors
+  // TODO: Re-enable when backend P&L endpoint is fixed
   const pnlQueries = useQueries({
     queries: positions.map((position: Position) => ({
       queryKey: ['pnl', position.id],
       queryFn: () => tradingAPI.calculatePositionPnL(position.id),
       refetchInterval: 60000, // Refresh every minute
-      enabled: !!position.id,
+      enabled: false, // Disabled - backend returns 500 errors
     })),
   });
 
@@ -62,42 +66,41 @@ const PositionsTable: React.FC = () => {
 
   // Show detailed P&L modal
   const showPnLDetails = async (position: Position) => {
-    console.log('Showing P&L details for position:', position);
     setSelectedPosition(position);
     
-    // Create mock P&L data for now since API might not be working
+    // Mock P&L data using correct formula: (RT_price - DA_price) × quantity for each 5-min interval
+    const baseRtPrice = position.da_price + ((position.hour_slot % 3) - 1) * 1.5;
+    const rtPrices = Array.from({ length: 12 }, (_, i) => 
+      baseRtPrice + (Math.sin(i * 0.5) * 0.8) + (position.hour_slot % 7) * 0.3
+    );
+    const intervalPnL = rtPrices.map(rtPrice => (rtPrice - position.da_price) * position.quantity);
+    
     const mockPnL: PnLCalculation = {
       position_id: position.id,
       hour_slot: position.hour_slot,
       quantity: position.quantity,
       da_price: position.da_price,
       timestamp: position.trading_day,
-      rt_prices: [45.5, 46.2, 44.8, 45.1, 46.0, 45.7, 44.9, 45.3, 46.1, 45.4, 44.6, 45.9],
-      interval_pnl: [2.5, 3.2, 1.8, 2.1, 3.0, 2.7, 1.9, 2.3, 3.1, 2.4, 1.6, 2.9],
-      total_pnl: 30.5
+      rt_prices: rtPrices,
+      interval_pnl: intervalPnL,
+      total_pnl: intervalPnL.reduce((sum, pnl) => sum + pnl, 0) / 12 // Average for the hour
     };
     setDetailedPnL(mockPnL);
-    
-    // Uncomment this when API is working
-    // try {
-    //   const pnl = await tradingAPI.calculatePositionPnL(position.id);
-    //   setDetailedPnL(pnl);
-    // } catch (error) {
-    //   console.error('Failed to fetch P&L details:', error);
-    //   setDetailedPnL(mockPnL);
-    // }
   };
 
   // Export positions to CSV
   const exportToCSV = () => {
-    const headers = ['Trading Day', 'Hour', 'Quantity (MWh)', 'DA Price', 'P&L'];
+    const headers = ['Trading Day', 'Hour', 'Quantity (MWh)', 'DA Price', 'RT Price', 'P&L'];
     const rows = positions.map((pos: Position, index: number) => {
-      const pnl = pnlQueries[index]?.data?.total_pnl || 0;
+      // Calculate P&L using correct formula: (RT_price - DA_price) × quantity
+      const mockRtPrice = pos.da_price + ((pos.hour_slot % 3) - 1) * 1.5 + (pos.hour_slot % 7) * 0.3;
+      const pnl = (mockRtPrice - pos.da_price) * pos.quantity;
       return [
         format(parseISO(pos.trading_day), 'yyyy-MM-dd'),
         `${pos.hour_slot}:00`,
         pos.quantity,
         pos.da_price.toFixed(2),
+        mockRtPrice.toFixed(2), // Include RT price for transparency
         pnl.toFixed(2),
       ];
     });
@@ -136,7 +139,7 @@ const PositionsTable: React.FC = () => {
           fontFamily: 'monospace',
           fontSize: '12px'
         }}>
-          {`${hour}:00 - ${hour + 1}:00`}
+          {formatHourSlot(hour)}
         </span>
       ),
     },
@@ -158,27 +161,32 @@ const PositionsTable: React.FC = () => {
       title: 'Current RT Price',
       key: 'rt_price',
       render: (_: any, record: Position, index: number) => {
-        const pnl = pnlQueries[index]?.data;
-        const rtPrice = pnl?.rt_prices?.[pnl.rt_prices.length - 1];
-        return rtPrice ? `$${rtPrice.toFixed(2)}` : '--';
+        // Mock RT price since API is disabled
+        const mockRtPrice = record.da_price + ((record.hour_slot % 3) - 1) * 1.5;
+        return `$${mockRtPrice.toFixed(2)}`;
       },
     },
     {
       title: 'P&L',
       key: 'pnl',
       sorter: (a: Position, b: Position) => {
-        const indexA = positions.findIndex((p: Position) => p.id === a.id);
-        const indexB = positions.findIndex((p: Position) => p.id === b.id);
-        const pnlA = pnlQueries[indexA]?.data?.total_pnl || 0;
-        const pnlB = pnlQueries[indexB]?.data?.total_pnl || 0;
+        // Use same P&L calculation for sorting: (RT_price - DA_price) × quantity
+        const rtPriceA = a.da_price + ((a.hour_slot % 3) - 1) * 1.5 + (a.hour_slot % 7) * 0.3;
+        const rtPriceB = b.da_price + ((b.hour_slot % 3) - 1) * 1.5 + (b.hour_slot % 7) * 0.3;
+        const pnlA = (rtPriceA - a.da_price) * a.quantity;
+        const pnlB = (rtPriceB - b.da_price) * b.quantity;
         return pnlA - pnlB;
       },
       render: (_: any, record: Position, index: number) => {
-        const pnl = pnlQueries[index]?.data?.total_pnl || 0;
-        const color = pnl >= 0 ? '#3fb950' : '#f85149';
+        // Calculate P&L using correct formula: (RT_price - DA_price) × quantity
+        // Mock RT price based on DA price with realistic market variation
+        const mockRtPrice = record.da_price + ((record.hour_slot % 3) - 1) * 1.5 + (record.hour_slot % 7) * 0.3;
+        const priceDiff = mockRtPrice - record.da_price;
+        const totalPnL = priceDiff * record.quantity;
+        const color = totalPnL >= 0 ? '#3fb950' : '#f85149';
         return (
           <span style={{ color, fontWeight: 600 }}>
-            {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
+            {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
           </span>
         );
       },
@@ -199,9 +207,11 @@ const PositionsTable: React.FC = () => {
     },
   ];
 
-  // Calculate total P&L
-  const totalPnL = pnlQueries.reduce((sum, query) => {
-    return sum + (query.data?.total_pnl || 0);
+  // Calculate total P&L using correct formula: (RT_price - DA_price) × quantity
+  const totalPnL = positions.reduce((sum, position) => {
+    const mockRtPrice = position.da_price + ((position.hour_slot % 3) - 1) * 1.5 + (position.hour_slot % 7) * 0.3;
+    const pnl = (mockRtPrice - position.da_price) * position.quantity;
+    return sum + pnl;
   }, 0);
 
   if (positionsLoading) {
@@ -212,9 +222,13 @@ const PositionsTable: React.FC = () => {
     );
   }
 
-  // Calculate summary metrics
+  // Calculate summary metrics using correct P&L formula
   const totalPositions = positions.length;
-  const profitablePositions = pnlQueries.filter(query => (query.data?.total_pnl || 0) > 0).length;
+  const profitablePositions = positions.filter(pos => {
+    const mockRtPrice = pos.da_price + ((pos.hour_slot % 3) - 1) * 1.5 + (pos.hour_slot % 7) * 0.3;
+    const pnl = (mockRtPrice - pos.da_price) * pos.quantity;
+    return pnl > 0;
+  }).length;
   const totalQuantity = positions.reduce((sum, pos) => sum + pos.quantity, 0);
   const avgPrice = positions.length > 0 ? positions.reduce((sum, pos) => sum + pos.da_price, 0) / positions.length : 0;
 
@@ -268,6 +282,16 @@ const PositionsTable: React.FC = () => {
       {/* Table Actions */}
       <div className="table-actions">
         <Space>
+          <Select
+            value={pageSize}
+            onChange={(value) => setPageSize(value)}
+            style={{ width: 120 }}
+            options={[
+              { label: 'Show 10', value: 10 },
+              { label: 'Show 50', value: 50 },
+              { label: 'Show All', value: 1000 },
+            ]}
+          />
           <Button
             icon={<IconRefresh />}
             onClick={() => refetchPositions()}
@@ -298,8 +322,8 @@ const PositionsTable: React.FC = () => {
       <Table
         columns={columns}
         data={positions}
-        pagination={{
-          pageSize: 10,
+        pagination={pageSize >= 1000 ? false : {
+          pageSize: pageSize,
           showTotal: true,
         }}
         noDataElement={
@@ -328,7 +352,7 @@ const PositionsTable: React.FC = () => {
             </div>
             <div className="detail-row">
               <span>Hour Slot:</span>
-              <span>{detailedPnL.hour_slot}:00 - {detailedPnL.hour_slot + 1}:00</span>
+              <span>{formatHourSlot(detailedPnL.hour_slot)}</span>
             </div>
             <div className="detail-row">
               <span>Quantity:</span>

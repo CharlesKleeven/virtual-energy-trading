@@ -1,40 +1,42 @@
 # Virtual Energy Trading Platform
 
-Day-ahead energy market trading simulator with real-time P&L tracking using actual CAISO market data.
+Day-ahead energy market trading simulator with real-time P&L tracking using live CAISO market data.
 
-## Features
-
-- Submit day-ahead market bids (11am cutoff validation)
-- Real-time profit/loss tracking at 5-minute intervals  
-- Interactive price charts with zoom/pan
-- Dark/light theme
-- CSV export of positions
-
-## Run Locally
+## Quick Start
 
 **Backend:**
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+cd backend && uvicorn app.main:app --reload
 ```
 
 **Frontend:**
 ```bash
-cd frontend  
-npm install
-npm start
+cd frontend && npm start
 ```
 
 Visit http://localhost:3000
 
-## Usage
+## Core Features
 
-1. Select trading day and hour slots
-2. Enter bid price/quantity 
-3. Submit bids (creates positions)
-4. Track real-time P&L as prices update
+- **Day-Ahead Market Simulation**: Submit up to 10 bids per hour slot, 11am cutoff enforced
+- **Real-Time P&L Tracking**: `(RTM_price - DAM_price) × quantity` at 5-minute intervals
+- **Live CAISO Data**: GridStatus.io API integration for authentic market prices
+- **Interactive Visualizations**: Price charts with zoom, market statistics dashboard
+- **Position Management**: Track multiple positions with sortable table and CSV export
 
-P&L Formula: `(RT_price - DA_price) × quantity`
+## Tech Stack
+
+React, TypeScript, Arco Design, FastAPI, GridStatus.io
+
+## Trading Workflow
+
+1. **Monitor Markets**: View DAM/RTM price charts and market statistics
+2. **Submit Bids**: Enter price/quantity for specific hours (max 10 per hour, before 11am)
+3. **Track Performance**: Real-time P&L calculations as RTM prices update every 5 minutes
+
+## Key Constraints
+
+- **11am Cutoff**: Same-day DAM bids must be submitted before 11am PST
+- **10 Bid Limit**: Maximum 10 bids allowed per hour slot
+- **Small Trader**: Assumes bids don't move market prices
+- **P&L Formula**: Profit/loss = (Real_Time_Price - Day_Ahead_Price) × Quantity

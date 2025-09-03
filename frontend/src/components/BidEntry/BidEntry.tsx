@@ -1,10 +1,3 @@
-/**
- * Bid Entry Component
- * ===================
- * Form for submitting day-ahead market bids.
- * Features validation, bulk operations, and 11am cutoff enforcement.
- */
-
 import React, { useState, useEffect } from 'react';
 import {
   Form,
@@ -19,10 +12,10 @@ import {
 } from '@arco-design/web-react';
 import { IconPlus, IconDelete, IconCopy } from '@arco-design/web-react/icon';
 import { useMutation } from '@tanstack/react-query';
-import { isBefore, isToday, setHours, setMinutes } from 'date-fns';
 import dayjs, { Dayjs } from 'dayjs';
 import { tradingAPI } from '../../services/api';
 import { Bid, BidSubmission } from '../../types/trading';
+import { formatHourSlot } from '../../utils/formatters';
 import './BidEntry.css';
 
 const FormItem = Form.Item;
@@ -39,14 +32,12 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
   const [selectedHours, setSelectedHours] = useState<number[]>([]);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
 
-  // Check if past 11am cutoff for same-day trading
   const isPastCutoff = () => {
-    if (!isToday(tradingDay.toDate())) return false;
-    const cutoff = setMinutes(setHours(new Date(), 11), 0);
-    return isBefore(cutoff, new Date());
+    if (!tradingDay.isSame(dayjs(), 'day')) return false;
+    const cutoff = dayjs().hour(11).minute(0).second(0);
+    return dayjs().isAfter(cutoff);
   };
 
-  // Initialize form with selected hour
   useEffect(() => {
     if (selectedHour !== null && selectedHour !== undefined) {
       form.setFieldValue('hour_slot', selectedHour);
@@ -54,7 +45,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     }
   }, [selectedHour, form]);
 
-  // Auto-hide notifications after 3 seconds
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -62,12 +52,10 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     }
   }, [notification]);
 
-  // Show notification helper
   const showNotification = (type: 'success' | 'error' | 'warning', message: string) => {
     setNotification({ type, message });
   };
 
-  // Mutation for submitting bids
   const submitMutation = useMutation({
     mutationFn: (submission: BidSubmission) => tradingAPI.submitBids(submission),
     onSuccess: (data) => {
@@ -81,18 +69,15 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     },
   });
 
-  // Add a new bid to the list
   const handleAddBid = () => {
     form.validate().then((values) => {
       const hours = selectedHours.length > 0 ? selectedHours : [values.hour_slot];
-      
       const newBids = hours.map(hour => ({
         hour_slot: hour,
         price: values.price,
         quantity: values.quantity,
       }));
 
-      // Check max 10 bids per hour
       const hourCounts: Record<number, number> = {};
       [...bids, ...newBids].forEach(bid => {
         hourCounts[bid.hour_slot] = (hourCounts[bid.hour_slot] || 0) + 1;
@@ -111,12 +96,10 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     });
   };
 
-  // Remove a bid from the list
   const handleRemoveBid = (index: number) => {
     setBids(bids.filter((_, i) => i !== index));
   };
 
-  // Submit all bids
   const handleSubmit = () => {
     if (bids.length === 0) {
       showNotification('warning', 'Please add at least one bid');
@@ -136,7 +119,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     submitMutation.mutate(submission);
   };
 
-  // Clear all staged bids
   const handleClearAll = () => {
     setBids([]);
     form.resetFields();
@@ -144,7 +126,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     showNotification('success', 'All bids cleared');
   };
 
-  // Bulk copy bids to multiple hours
   const handleBulkCopy = () => {
     if (bids.length === 0) {
       showNotification('warning', 'No bids to copy');
@@ -175,7 +156,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
       dataIndex: 'hour_slot',
       key: 'hour_slot',
       render: (hour: number) => (
-        <Tag color="blue">{`${hour}:00 - ${hour + 1}:00`}</Tag>
+        <Tag color="blue">{formatHourSlot(hour)}</Tag>
       ),
     },
     {
@@ -239,7 +220,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
             style={{ width: '100%' }}
             value={tradingDay}
             onChange={(dateString, date) => date && setTradingDay(date)}
-            disabledDate={(date) => date && isBefore(date.toDate(), new Date())}
+            disabledDate={(date) => date && date.isBefore(dayjs(), 'day')}
           />
         </FormItem>
 
@@ -264,7 +245,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
           >
             {Array.from({ length: 24 }, (_, i) => (
               <Select.Option key={i} value={i}>
-                {`${i}:00 - ${i + 1}:00`}
+                {formatHourSlot(i)}
               </Select.Option>
             ))}
           </Select>
