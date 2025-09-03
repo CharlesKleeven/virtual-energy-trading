@@ -182,17 +182,17 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
         <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 30, right: 40, left: 90, bottom: 70 }}
+          margin={{ top: 20, right: 30, left: 80, bottom: 90 }}
           onClick={handleChartClick}
         >
           <CartesianGrid strokeDasharray="1 1" stroke="#444" opacity={0.3} />
           <XAxis 
             dataKey="time" 
-            angle={0}
-            textAnchor="middle"
-            height={40}
-            interval={Math.ceil(chartData.length / 8)}
-            tick={{ fill: '#b2b5be', fontSize: 11 }}
+            angle={-45}
+            textAnchor="end"
+            height={60}
+            interval={Math.ceil(chartData.length / 6)}
+            tick={{ fill: '#b2b5be', fontSize: 10 }}
             axisLine={{ stroke: '#2a2f3a' }}
             tickLine={{ stroke: '#2a2f3a' }}
           />
@@ -255,9 +255,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
           {/* Brush for zooming */}
           <Brush
             dataKey="time"
-            height={20}
-            stroke="#1e222d"
-            fill="#0a0b0d"
+            height={24}
+            stroke="#666"
+            fill="#333"
             startIndex={Math.max(0, chartData.length - 24)}
           />
         </LineChart>

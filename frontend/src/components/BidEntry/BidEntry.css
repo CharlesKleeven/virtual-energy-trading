@@ -67,6 +67,12 @@
   border-radius: 8px !important;
 }
 
+.arco-picker-input,
+.arco-picker-input input {
+  color: white !important;
+  background: transparent !important;
+}
+
 .arco-select-option {
   background: #333 !important;
   color: white !important;
@@ -74,4 +80,69 @@
 
 .arco-select-option:hover {
   background: #444 !important;
+}
+
+/* Fix multi-select dropdown */
+.arco-select-popup,
+.arco-select-dropdown {
+  background: #333 !important;
+  border-color: #555 !important;
+}
+
+/* Fix multi-select checkboxes */
+.arco-checkbox,
+.arco-select-option .arco-checkbox,
+.arco-select-popup .arco-checkbox {
+  background: #333 !important;
+  border-color: #555 !important;
+}
+
+.arco-checkbox-inner,
+.arco-select-option .arco-checkbox-inner,
+.arco-select-popup .arco-checkbox-inner {
+  background: #333 !important;
+  border-color: #555 !important;
+}
+
+.arco-checkbox-inner::after,
+.arco-select-option .arco-checkbox-inner::after,
+.arco-select-popup .arco-checkbox-inner::after {
+  border-color: white !important;
+}
+
+.arco-checkbox.arco-checkbox-checked .arco-checkbox-inner,
+.arco-select-option .arco-checkbox.arco-checkbox-checked .arco-checkbox-inner,
+.arco-select-popup .arco-checkbox.arco-checkbox-checked .arco-checkbox-inner {
+  background: #ffd700 !important;
+  border-color: #ffd700 !important;
+}
+
+.arco-checkbox.arco-checkbox-checked .arco-checkbox-inner::after,
+.arco-select-option .arco-checkbox.arco-checkbox-checked .arco-checkbox-inner::after,
+.arco-select-popup .arco-checkbox.arco-checkbox-checked .arco-checkbox-inner::after {
+  border-color: #000 !important;
+}
+
+/* Global checkbox dark theme fix */
+body .arco-checkbox {
+  background: #333 !important;
+  border-color: #555 !important;
+}
+
+body .arco-checkbox-inner {
+  background: #333 !important;
+  border-color: #555 !important;
+}
+
+body .arco-checkbox-inner::after {
+  border-color: white !important;
+}
+
+body .arco-checkbox.arco-checkbox-checked .arco-checkbox-inner {
+  background: #ffd700 !important;
+  border-color: #ffd700 !important;
+}
+
+body .arco-checkbox.arco-checkbox-checked .arco-checkbox-inner::after {
+  border-color: #000 !important;
 }

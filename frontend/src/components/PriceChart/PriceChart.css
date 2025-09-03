@@ -87,7 +87,7 @@
 }
 
 .chart-wrapper {
-  height: 400px;
+  height: 580px;
   background: #111;
   border: 1px solid #333;
   border-radius: 12px;
@@ -145,3 +145,19 @@
 .stat-change.positive { color: #4CAF50; }
 .stat-change.negative { color: #f44336; }
 .stat-change.neutral { color: #999; }
+
+/* Fix brush/timeline visibility */
+.recharts-brush-slide {
+  fill: rgba(255, 255, 255, 0.1) !important;
+  stroke: #999 !important;
+}
+
+.recharts-brush-texts text {
+  fill: white !important;
+  font-size: 10px !important;
+}
+
+.recharts-brush .recharts-brush-traveller {
+  stroke: #ccc !important;
+  fill: #555 !important;
+}
