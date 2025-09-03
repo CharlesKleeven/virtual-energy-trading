@@ -12,7 +12,6 @@ import {
   Button,
   Select,
   DatePicker,
-  Message,
   Space,
   Table,
   Popconfirm,
@@ -38,6 +37,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
   const [bids, setBids] = useState<Bid[]>([]);
   const [tradingDay, setTradingDay] = useState<Dayjs>(dayjs());
   const [selectedHours, setSelectedHours] = useState<number[]>([]);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
 
   // Check if past 11am cutoff for same-day trading
   const isPastCutoff = () => {
@@ -54,17 +54,30 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     }
   }, [selectedHour, form]);
 
+  // Auto-hide notifications after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  // Show notification helper
+  const showNotification = (type: 'success' | 'error' | 'warning', message: string) => {
+    setNotification({ type, message });
+  };
+
   // Mutation for submitting bids
   const submitMutation = useMutation({
     mutationFn: (submission: BidSubmission) => tradingAPI.submitBids(submission),
     onSuccess: (data) => {
-      Message.success(`Successfully submitted ${data.accepted_bids?.length || 0} bids`);
+      showNotification('success', `Successfully submitted ${data.accepted_bids?.length || 0} bids`);
       setBids([]);
       form.resetFields();
       onSubmitSuccess?.();
     },
     onError: (error: any) => {
-      Message.error(error.response?.data?.detail || 'Failed to submit bids');
+      showNotification('error', error.response?.data?.detail || 'Failed to submit bids');
     },
   });
 
@@ -87,7 +100,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
 
       for (const [hour, count] of Object.entries(hourCounts)) {
         if (count > 10) {
-          Message.warning(`Maximum 10 bids allowed for hour ${hour}`);
+          showNotification('warning', `Maximum 10 bids allowed for hour ${hour}`);
           return;
         }
       }
@@ -106,12 +119,12 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
   // Submit all bids
   const handleSubmit = () => {
     if (bids.length === 0) {
-      Message.warning('Please add at least one bid');
+      showNotification('warning', 'Please add at least one bid');
       return;
     }
 
     if (isPastCutoff()) {
-      Message.error('Cannot submit bids after 11:00 AM for same-day trading');
+      showNotification('error', 'Cannot submit bids after 11:00 AM for same-day trading');
       return;
     }
 
@@ -123,10 +136,18 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     submitMutation.mutate(submission);
   };
 
+  // Clear all staged bids
+  const handleClearAll = () => {
+    setBids([]);
+    form.resetFields();
+    setSelectedHours([]);
+    showNotification('success', 'All bids cleared');
+  };
+
   // Bulk copy bids to multiple hours
   const handleBulkCopy = () => {
     if (bids.length === 0) {
-      Message.warning('No bids to copy');
+      showNotification('warning', 'No bids to copy');
       return;
     }
 
@@ -144,7 +165,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
 
     if (copiedBids.length > 0) {
       setBids([...bids, ...copiedBids]);
-      Message.success(`Copied bid to ${copiedBids.length} hours`);
+      showNotification('success', `Copied bid to ${copiedBids.length} hours`);
     }
   };
 
@@ -196,6 +217,13 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
 
   return (
     <div className="bid-entry-container">
+      {/* Notification */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          {notification.message}
+        </div>
+      )}
+      
       <Form
         form={form}
         layout="vertical"
@@ -294,6 +322,13 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
             disabled={bids.length === 0}
           >
             Copy to All Hours
+          </Button>
+          <Button
+            onClick={handleClearAll}
+            disabled={bids.length === 0}
+            style={{ color: '#f44336' }}
+          >
+            Clear All
           </Button>
         </Space>
       </Form>

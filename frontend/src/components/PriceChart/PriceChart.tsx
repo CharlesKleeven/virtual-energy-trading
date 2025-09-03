@@ -32,6 +32,7 @@ interface PriceChartProps {
 const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) => {
   const [viewMode, setViewMode] = React.useState<'dam' | 'rtm' | 'both'>('both');
   const [timeframe, setTimeframe] = React.useState<'1D' | '7D' | '30D'>('7D');
+  const [zoomDomain, setZoomDomain] = React.useState<[string, string] | undefined>(undefined);
   const dateRange = React.useMemo(() => [
     subDays(new Date(), 7),
     new Date()
@@ -102,22 +103,30 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
     );
   }, [damPrices, rtmPrices, viewMode]);
 
+  // Filter chart data based on zoom domain
+  const displayData = useMemo(() => {
+    if (!zoomDomain) return chartData;
+    return chartData.filter(item => 
+      item.time >= zoomDomain[0] && item.time <= zoomDomain[1]
+    );
+  }, [chartData, zoomDomain]);
+
   // Enhanced tooltip with professional styling
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="price-chart-tooltip">
-          <div className="label">{label}</div>
+          <div className="tooltip-time">{label}</div>
           {payload.map((entry: any, index: number) => (
-            <div key={index} className="price-line">
-              <span style={{ color: entry.color }}>{entry.name}</span>
-              <span className="price-value" style={{ color: entry.color }}>
+            <div key={index} className="tooltip-price-row">
+              <span className="tooltip-label">{entry.name}:</span>
+              <span className="tooltip-value" style={{ color: entry.color }}>
                 ${entry.value?.toFixed(2)}/MWh
               </span>
             </div>
           ))}
           {payload[0]?.payload?.hour !== undefined && (
-            <div className="hour">Hour {payload[0].payload.hour} • Click to select</div>
+            <div className="tooltip-hour">Hour {payload[0].payload.hour}</div>
           )}
         </div>
       );
@@ -132,6 +141,21 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
       if (hour !== undefined) {
         onHourSelect?.(hour);
       }
+    }
+  };
+
+  // Handle brush change for zooming
+  const handleBrushChange = (brushData: any) => {
+    if (brushData && brushData.startIndex !== undefined && brushData.endIndex !== undefined) {
+      const startIdx = Math.max(0, brushData.startIndex);
+      const endIdx = Math.min(chartData.length - 1, brushData.endIndex);
+      const start = chartData[startIdx]?.time;
+      const end = chartData[endIdx]?.time;
+      if (start && end) {
+        setZoomDomain([start, end]);
+      }
+    } else {
+      setZoomDomain(undefined);
     }
   };
 
@@ -181,7 +205,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
       <div className="chart-wrapper">
         <ResponsiveContainer width="100%" height="100%">
         <LineChart
-          data={chartData}
+          data={displayData}
           margin={{ top: 20, right: 30, left: 80, bottom: 90 }}
           onClick={handleChartClick}
         >
@@ -251,16 +275,45 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
               label={{ value: `Hour ${selectedHour}`, fill: '#F6465D', fontSize: 11, fontWeight: 600 }}
             />
           )}
-
-          {/* Brush for zooming */}
-          <Brush
-            dataKey="time"
-            height={24}
-            stroke="#666"
-            fill="#333"
-            startIndex={Math.max(0, chartData.length - 24)}
-          />
         </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Timeline Instructions */}
+      <div className="timeline-instructions">
+        Zoom: Drag timeline to select date range
+      </div>
+
+      {/* Separate Timeline/Brush */}
+      <div className="chart-timeline">
+        <ResponsiveContainer width="100%" height={40}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+          >
+            <Line 
+              type="monotone" 
+              dataKey="damPrice" 
+              stroke="#3861FB" 
+              strokeWidth={1}
+              dot={false}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="rtmPrice" 
+              stroke="#0ECB81" 
+              strokeWidth={1}
+              dot={false}
+            />
+            <Brush
+              dataKey="time"
+              height={30}
+              stroke="#999"
+              fill="#444"
+              startIndex={Math.max(0, chartData.length - 24)}
+              onChange={handleBrushChange}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
 

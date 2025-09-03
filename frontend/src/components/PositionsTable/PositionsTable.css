@@ -2,6 +2,42 @@
   width: 100%;
 }
 
+.pnl-summary-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.pnl-metric {
+  text-align: center;
+}
+
+.pnl-metric-label {
+  font-size: 10px;
+  color: #ccc;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.pnl-metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: monospace;
+  margin-bottom: 2px;
+}
+
+.pnl-metric-change {
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .table-actions {
   display: flex;
   justify-content: space-between;
@@ -9,37 +45,220 @@
   margin-bottom: 16px;
 }
 
-.total-pnl {
-  font-size: 16px;
-  color: white;
-  font-weight: bold;
-  font-family: monospace;
+.table-actions .arco-btn {
+  background: #333 !important;
+  border-color: #555 !important;
+  color: white !important;
 }
 
-/* Simple Arco table overrides */
-.arco-table {
-  background: #1a1a1a !important;
-  border: 1px solid #333 !important;
+.table-actions .arco-btn:hover {
+  background: #444 !important;
+  border-color: #666 !important;
 }
 
-.arco-table-header th {
+.positions-loading {
+  padding: 40px;
+  text-align: center;
+}
+
+/* Force dark table background with highest specificity */
+.positions-table-container table,
+.positions-table-container .arco-table,
+.positions-table-container .arco-table .arco-table-container,
+.positions-table-container .arco-table-element,
+.positions-table-container .arco-table-content,
+.positions-table-container .arco-table-scroll {
   background: #111 !important;
-  color: #ccc !important;
+  background-color: #111 !important;
+  border: 1px solid #333 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+/* Force all table elements to dark theme */
+.positions-table-container * {
+  box-shadow: none !important;
+}
+
+.positions-table-container .arco-table-header,
+.positions-table-container .arco-table-thead {
+  background: #0a0a0a !important;
+}
+
+.positions-table-container .arco-table-header th,
+.positions-table-container .arco-table-thead th {
+  background: #0a0a0a !important;
+  color: white !important;
   border-color: #333 !important;
   font-size: 11px !important;
   text-transform: uppercase !important;
+  font-weight: 600 !important;
+  padding: 12px 16px !important;
 }
 
-.arco-table-tr {
+.positions-table-container .arco-table-body,
+.positions-table-container .arco-table-tbody {
+  background: #111 !important;
+}
+
+.positions-table-container .arco-table-tr,
+.positions-table-container .arco-table-tbody tr {
+  background: #111 !important;
+  border-color: #2a2a2a !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.positions-table-container .arco-table-tr:hover,
+.positions-table-container .arco-table-tbody tr:hover {
   background: #1a1a1a !important;
-  border-color: #333 !important;
 }
 
-.arco-table-tr:hover {
-  background: #252525 !important;
-}
-
-.arco-table-td {
+.positions-table-container .arco-table-td,
+.positions-table-container .arco-table-tbody td {
   color: white !important;
-  border-color: #333 !important;
+  border-color: #2a2a2a !important;
+  padding: 12px 16px !important;
+  font-size: 13px !important;
+  background: #111 !important;
+}
+
+.no-data {
+  color: #999;
+  font-style: italic;
+  padding: 40px;
+  text-align: center;
+}
+
+/* P&L Details Modal Styling */
+.pnl-details {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+  color: white;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row.total {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #444;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.detail-row span:first-child {
+  color: #ccc;
+  font-weight: 500;
+}
+
+.detail-row span:last-child {
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.pnl-details h4 {
+  color: white;
+  margin: 20px 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.interval-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  background: #111;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+
+.interval-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  border: 1px solid #2a2a2a;
+}
+
+.interval-item span:first-child {
+  font-size: 10px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.interval-item span:last-child {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+/* Modal overrides */
+.arco-modal {
+  background: #111 !important;
+}
+
+.arco-modal .arco-modal-header {
+  background: #111 !important;
+  border-bottom: 1px solid #333 !important;
+}
+
+.arco-modal .arco-modal-title {
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.arco-modal .arco-modal-body {
+  background: #111 !important;
+  color: white !important;
+}
+
+.arco-modal .arco-modal-close-btn {
+  color: #ccc !important;
+}
+
+.arco-modal .arco-modal-close-btn:hover {
+  color: white !important;
+}
+
+/* Fix any pagination white backgrounds */
+.arco-pagination {
+  background: transparent !important;
+}
+
+.arco-pagination .arco-pagination-item {
+  background: #333 !important;
+  border-color: #555 !important;
+  color: white !important;
+}
+
+.arco-pagination .arco-pagination-item:hover {
+  background: #444 !important;
+  border-color: #666 !important;
+}
+
+.arco-pagination .arco-pagination-item-active {
+  background: #ffd700 !important;
+  border-color: #ffd700 !important;
+  color: #000 !important;
+}
+
+/* Fix skeleton loading */
+.arco-skeleton .arco-skeleton-line {
+  background: #333 !important;
 }

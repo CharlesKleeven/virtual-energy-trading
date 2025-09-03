@@ -102,19 +102,38 @@
   backdrop-filter: blur(4px) !important;
 }
 
-.price-chart-tooltip .label {
+.tooltip-time {
   color: white !important;
   font-weight: 600 !important;
-  margin-bottom: 4px !important;
+  margin-bottom: 8px !important;
+  font-size: 12px !important;
 }
 
-.price-chart-tooltip .price-line {
-  margin: 2px 0 !important;
+.tooltip-price-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin: 4px 0 !important;
+  min-width: 150px !important;
 }
 
-.price-chart-tooltip .hour {
+.tooltip-label {
   color: #ccc !important;
-  border-top-color: #555 !important;
+  font-size: 11px !important;
+}
+
+.tooltip-value {
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  font-family: monospace !important;
+}
+
+.tooltip-hour {
+  color: #999 !important;
+  font-size: 10px !important;
+  margin-top: 6px !important;
+  padding-top: 6px !important;
+  border-top: 1px solid #555 !important;
 }
 
 .price-stats {
@@ -148,8 +167,8 @@
 
 /* Fix brush/timeline visibility */
 .recharts-brush-slide {
-  fill: rgba(255, 255, 255, 0.1) !important;
-  stroke: #999 !important;
+  fill: rgba(255, 255, 255, 0.15) !important;
+  stroke: #bbb !important;
 }
 
 .recharts-brush-texts text {
@@ -160,4 +179,19 @@
 .recharts-brush .recharts-brush-traveller {
   stroke: #ccc !important;
   fill: #555 !important;
+}
+
+.timeline-instructions {
+  text-align: center;
+  font-size: 10px;
+  color: #999;
+  margin: 8px 0 4px 0;
+  font-weight: 400;
+}
+
+.chart-timeline {
+  margin-top: 4px;
+  padding: 0 8px;
+  background: #0f0f0f;
+  border-radius: 4px;
 }
