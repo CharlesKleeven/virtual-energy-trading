@@ -1,0 +1,45 @@
+.market-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.stat-card {
+  background: #1a1a1a;
+  padding: 16px;
+  color: white;
+}
+
+.stat-card:hover {
+  background: #252525;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #ccc;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  font-family: monospace;
+  margin-bottom: 4px;
+}
+
+.stat-change {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-family: monospace;
+}
+
+.stat-change.positive { color: #4CAF50; }
+.stat-change.negative { color: #f44336; }
+.stat-change.neutral { color: #999; }

@@ -1,0 +1,45 @@
+.positions-table-container {
+  width: 100%;
+}
+
+.table-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.total-pnl {
+  font-size: 16px;
+  color: white;
+  font-weight: bold;
+  font-family: monospace;
+}
+
+/* Simple Arco table overrides */
+.arco-table {
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+}
+
+.arco-table-header th {
+  background: #111 !important;
+  color: #ccc !important;
+  border-color: #333 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+}
+
+.arco-table-tr {
+  background: #1a1a1a !important;
+  border-color: #333 !important;
+}
+
+.arco-table-tr:hover {
+  background: #252525 !important;
+}
+
+.arco-table-td {
+  color: white !important;
+  border-color: #333 !important;
+}

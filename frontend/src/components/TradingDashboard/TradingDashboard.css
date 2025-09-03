@@ -1,0 +1,108 @@
+.trading-dashboard {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: white;
+  font-family: 'Inter', sans-serif;
+}
+
+.dashboard-header {
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo h1 {
+  margin: 0;
+  font-size: 18px;
+  color: white;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin-left: 12px;
+  color: #aaa;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.market-status {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.market-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4CAF50;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.dashboard-content {
+  padding: 24px 32px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 24px;
+  min-height: calc(100vh - 56px);
+}
+
+.main-trading-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  min-height: 500px;
+}
+
+.trading-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+  background: #111;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 12px;
+  color: #ccc;
+  text-transform: uppercase;
+}
+
+.card-content {
+  padding: 20px;
+}

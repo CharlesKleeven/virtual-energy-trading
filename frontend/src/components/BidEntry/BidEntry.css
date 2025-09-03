@@ -1,0 +1,71 @@
+.bid-entry-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.bid-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cutoff-warning {
+  background: #2a1a1a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #ffcc00;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background: #ffd700;
+  border: 1px solid #ffd700;
+  color: black;
+  font-weight: bold;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #ffed4a;
+}
+
+.submit-btn:disabled {
+  background: #333;
+  border-color: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Simple Arco overrides */
+.arco-form-item-label {
+  color: #ccc !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+}
+
+.arco-select,
+.arco-picker,
+.arco-input-number {
+  background: #333 !important;
+  border: 1px solid #555 !important;
+  color: white !important;
+}
+
+.arco-select-option {
+  background: #333 !important;
+  color: white !important;
+}
+
+.arco-select-option:hover {
+  background: #444 !important;
+}
