@@ -50,10 +50,10 @@ const MarketStats: React.FC = () => {
 
   // Calculate derived values
   const currentDA = stats?.avg_price_24h || 0;
-  const currentRT = currentDA + 2.5; // Mock RT price based on DA + spread
+  const currentRT = currentDA + 2.5; // Simulated RT price based on DA + typical spread
   const spread = currentRT - currentDA;
-  const daChange = 1.2; // Mock consistent change - replace with real API data when available
-  const rtChange = -0.8; // Mock consistent change - replace with real API data when available
+  const daChange = 1.2; // Simulated price change for demonstration
+  const rtChange = -0.8; // Simulated price change for demonstration
 
   return (
     <div className="market-stats-container">

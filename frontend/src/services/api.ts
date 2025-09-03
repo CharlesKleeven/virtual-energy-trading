@@ -15,6 +15,7 @@ import {
 } from '../types/trading';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Configure axios defaults
 const apiClient = axios.create({
@@ -28,7 +29,7 @@ const apiClient = axios.create({
 apiClient.interceptors.response.use(
   response => response,
   error => {
-    console.error('API Error:', error);
+    if (isDevelopment) console.error('API Error:', error);
     // Could add toast notification here
     return Promise.reject(error);
   }
@@ -127,7 +128,7 @@ class WebSocketManager {
       this.ws = new WebSocket(wsUrl);
       
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        if (isDevelopment) console.log('WebSocket connected');
         // Send ping every 30 seconds to keep connection alive
         this.pingInterval = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
@@ -141,20 +142,20 @@ class WebSocketManager {
           const message = JSON.parse(event.data);
           this.notifyListeners('price_update', message);
         } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
+          if (isDevelopment) console.error('Error parsing WebSocket message:', e);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        if (isDevelopment) console.error('WebSocket error:', error);
       };
 
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        if (isDevelopment) console.log('WebSocket disconnected');
         this.reconnect();
       };
     } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
+      if (isDevelopment) console.error('Failed to connect WebSocket:', error);
       this.reconnect();
     }
   }
@@ -168,7 +169,7 @@ class WebSocketManager {
     }
 
     this.reconnectTimeout = setTimeout(() => {
-      console.log('Attempting to reconnect WebSocket...');
+      if (isDevelopment) console.log('Attempting to reconnect WebSocket...');
       this.connect();
     }, 5000);
   }
@@ -196,7 +197,7 @@ class WebSocketManager {
       try {
         callback(data);
       } catch (e) {
-        console.error('Error in WebSocket listener:', e);
+        if (isDevelopment) console.error('Error in WebSocket listener:', e);
       }
     });
   }
