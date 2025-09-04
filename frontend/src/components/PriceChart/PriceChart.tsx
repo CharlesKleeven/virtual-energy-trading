@@ -5,7 +5,7 @@
  * Features zoom/pan, bid overlay, and hour selection.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, memo, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -28,7 +28,7 @@ interface PriceChartProps {
   selectedHour?: number | null;
 }
 
-const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) => {
+const PriceChart: React.FC<PriceChartProps> = memo(({ onHourSelect, selectedHour }) => {
   const [viewMode, setViewMode] = React.useState<'dam' | 'rtm' | 'both'>('both');
   const [timeframe, setTimeframe] = React.useState<'1D' | '7D' | '30D'>('7D');
   
@@ -140,15 +140,15 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
     return null;
   };
 
-  // Handle click on chart to select hour
-  const handleChartClick = (data: any) => {
+  // Handle click on chart to select hour (memoized to prevent unnecessary re-renders)
+  const handleChartClick = useCallback((data: any) => {
     if (data && data.activePayload && data.activePayload[0]) {
       const hour = data.activePayload[0].payload.hour;
       if (hour !== undefined) {
         onHourSelect?.(hour);
       }
     }
-  };
+  }, [onHourSelect]);
 
 
   // Loading state
@@ -313,6 +313,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
       </div>
     </div>
   );
-};
+});
+
+// Set display name for better debugging
+PriceChart.displayName = 'PriceChart';
 
 export default PriceChart;

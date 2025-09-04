@@ -9,7 +9,7 @@ export interface Bid {
   id?: string;
   hour_slot: number;
   price: number;
-  quantity: number;
+  quantity: number; // positive=buy, negative=sell
   submitted_at?: string;
   status?: 'pending' | 'accepted' | 'rejected' | 'cleared';
 }
@@ -23,7 +23,7 @@ export interface Position {
   id: string;
   bid_id: string;
   hour_slot: number;
-  quantity: number;
+  quantity: number; // positive=buy, negative=sell
   da_price: number;
   trading_day: string;
   created_at: string;

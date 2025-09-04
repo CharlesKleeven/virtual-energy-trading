@@ -108,10 +108,6 @@ const TradingDashboard: React.FC = () => {
                 <div className="card-content">
                   <BidEntry 
                     selectedHour={selectedHour}
-                    onSubmitSuccess={() => {
-                      // Refresh positions after successful submission
-                      queryClient.invalidateQueries({ queryKey: ['positions'] });
-                    }}
                   />
                 </div>
               </div>

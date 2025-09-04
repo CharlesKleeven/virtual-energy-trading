@@ -5,7 +5,7 @@
  * Features sortable columns, export to CSV, and detailed P&L modal.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useMemo, useCallback } from 'react';
 import {
   Table,
   Button,
@@ -25,7 +25,7 @@ import { Position, PnLCalculation } from '../../types/trading';
 import { formatHourSlot } from '../../utils/formatters';
 import './PositionsTable.css';
 
-const PositionsTable: React.FC = () => {
+const PositionsTable: React.FC = memo(() => {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [detailedPnL, setDetailedPnL] = useState<PnLCalculation | null>(null);
   const [pageSize, setPageSize] = useState<number>(10);
@@ -55,8 +55,8 @@ const PositionsTable: React.FC = () => {
     return unsubscribe;
   }, [refetchPositions]);
 
-  // Show detailed P&L modal
-  const showPnLDetails = async (position: Position) => {
+  // Show detailed P&L modal (memoized to prevent unnecessary re-renders)
+  const showPnLDetails = useCallback(async (position: Position) => {
     setSelectedPosition(position);
     
     // Calculate P&L using market formula: (RT_price - DA_price) × quantity for each 5-min interval
@@ -77,21 +77,25 @@ const PositionsTable: React.FC = () => {
       total_pnl: intervalPnL.reduce((sum, pnl) => sum + pnl, 0) / 12 // Average for the hour
     };
     setDetailedPnL(calculatedPnL);
-  };
+  }, []);
 
-  // Export positions to CSV
-  const exportToCSV = () => {
-    const headers = ['Trading Day', 'Hour', 'Quantity (MWh)', 'DA Price', 'RT Price', 'P&L'];
+  // Export positions to CSV (memoized for performance)
+  const exportToCSV = useCallback(() => {
+    const headers = ['Trading Day', 'Hour', 'Quantity (MWh)', 'Type', 'DA Price', 'RT Price', 'P&L'];
     const rows = positions.map((pos: Position, index: number) => {
-      // Calculate P&L using standard formula: (RT_price - DA_price) × quantity
-      const rtPrice = pos.da_price + ((pos.hour_slot % 3) - 1) * 1.5 + (pos.hour_slot % 7) * 0.3;
+      // Calculate P&L using standard formula with 5-minute updates
+      const fiveMinInterval = Math.floor(Date.now() / 300000);
+      const baseVariation = ((pos.hour_slot % 3) - 1) * 1.5;
+      const timeVariation = (fiveMinInterval % 12) * 0.2;
+      const rtPrice = pos.da_price + baseVariation + timeVariation;
       const pnl = (rtPrice - pos.da_price) * pos.quantity;
       return [
         format(parseISO(pos.trading_day), 'yyyy-MM-dd'),
-        `${pos.hour_slot}:00`,
-        pos.quantity,
+        `HE ${pos.hour_slot}`,
+        Math.abs(pos.quantity).toFixed(2),
+        pos.quantity > 0 ? 'Buy' : 'Sell',
         pos.da_price.toFixed(2),
-        rtPrice.toFixed(2), // Include RT price for transparency
+        rtPrice.toFixed(2),
         pnl.toFixed(2),
       ];
     });
@@ -108,9 +112,10 @@ const PositionsTable: React.FC = () => {
     a.download = `positions_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-  };
+  }, [positions]);
 
-  const columns = [
+  // Memoize columns to prevent unnecessary re-renders
+  const columns = useMemo(() => [
     {
       title: 'Trading Day',
       dataIndex: 'trading_day',
@@ -139,7 +144,11 @@ const PositionsTable: React.FC = () => {
       dataIndex: 'quantity',
       key: 'quantity',
       sorter: (a: Position, b: Position) => a.quantity - b.quantity,
-      render: (qty: number) => `${qty.toFixed(2)} MWh`,
+      render: (qty: number) => (
+        <span style={{ color: qty > 0 ? '#22c55e' : '#ef4444', fontWeight: '500' }}>
+          {Math.abs(qty).toFixed(2)} MWh ({qty > 0 ? 'Buy' : 'Sell'})
+        </span>
+      ),
     },
     {
       title: 'DA Price',
@@ -152,26 +161,40 @@ const PositionsTable: React.FC = () => {
       title: 'Current RT Price',
       key: 'rt_price',
       render: (_: any, record: Position, index: number) => {
-        // Calculate simulated RT price
-        const rtPrice = record.da_price + ((record.hour_slot % 3) - 1) * 1.5;
-        return `$${rtPrice.toFixed(2)}`;
+        // Calculate simulated RT price with 5-minute updates
+        const fiveMinInterval = Math.floor(Date.now() / 300000); // Updates every 5 minutes
+        const baseVariation = ((record.hour_slot % 3) - 1) * 1.5;
+        const timeVariation = (fiveMinInterval % 12) * 0.2; // 12 intervals per hour
+        const rtPrice = record.da_price + baseVariation + timeVariation;
+        return (
+          <span style={{ color: rtPrice > record.da_price ? '#22c55e' : '#ef4444' }}>
+            ${rtPrice.toFixed(2)}
+          </span>
+        );
       },
     },
     {
       title: 'P&L',
       key: 'pnl',
       sorter: (a: Position, b: Position) => {
-        // Use same P&L calculation for sorting: (RT_price - DA_price) × quantity
-        const rtPriceA = a.da_price + ((a.hour_slot % 3) - 1) * 1.5 + (a.hour_slot % 7) * 0.3;
-        const rtPriceB = b.da_price + ((b.hour_slot % 3) - 1) * 1.5 + (b.hour_slot % 7) * 0.3;
+        // Use consistent P&L calculation for sorting with 5-minute updates
+        const fiveMinInterval = Math.floor(Date.now() / 300000);
+        const baseVariationA = ((a.hour_slot % 3) - 1) * 1.5;
+        const timeVariation = (fiveMinInterval % 12) * 0.2;
+        const rtPriceA = a.da_price + baseVariationA + timeVariation;
+        const baseVariationB = ((b.hour_slot % 3) - 1) * 1.5;
+        const rtPriceB = b.da_price + baseVariationB + timeVariation;
         const pnlA = (rtPriceA - a.da_price) * a.quantity;
         const pnlB = (rtPriceB - b.da_price) * b.quantity;
         return pnlA - pnlB;
       },
       render: (_: any, record: Position, index: number) => {
         // Calculate P&L using standard formula: (RT_price - DA_price) × quantity
-        // Simulated RT price based on DA price with realistic market variation
-        const rtPrice = record.da_price + ((record.hour_slot % 3) - 1) * 1.5 + (record.hour_slot % 7) * 0.3;
+        // RT price updates every 5 minutes
+        const fiveMinInterval = Math.floor(Date.now() / 300000);
+        const baseVariation = ((record.hour_slot % 3) - 1) * 1.5;
+        const timeVariation = (fiveMinInterval % 12) * 0.2;
+        const rtPrice = record.da_price + baseVariation + timeVariation;
         const priceDiff = rtPrice - record.da_price;
         const totalPnL = priceDiff * record.quantity;
         const color = totalPnL >= 0 ? '#3fb950' : '#f85149';
@@ -196,14 +219,38 @@ const PositionsTable: React.FC = () => {
         </Button>
       ),
     },
-  ];
+  ], [showPnLDetails]);
 
-  // Calculate total P&L using standard formula: (RT_price - DA_price) × quantity
-  const totalPnL = positions.reduce((sum, position) => {
-    const rtPrice = position.da_price + ((position.hour_slot % 3) - 1) * 1.5 + (position.hour_slot % 7) * 0.3;
-    const pnl = (rtPrice - position.da_price) * position.quantity;
-    return sum + pnl;
-  }, 0);
+  // Calculate total P&L using standard formula: (RT_price - DA_price) × quantity (memoized)
+  const totalPnL = useMemo(() => {
+    return positions.reduce((sum, position) => {
+      const fiveMinInterval = Math.floor(Date.now() / 300000);
+      const baseVariation = ((position.hour_slot % 3) - 1) * 1.5;
+      const timeVariation = (fiveMinInterval % 12) * 0.2;
+      const rtPrice = position.da_price + baseVariation + timeVariation;
+      const pnl = (rtPrice - position.da_price) * position.quantity;
+      return sum + pnl;
+    }, 0);
+  }, [positions]);
+
+  // Calculate summary metrics using consistent P&L formula with 5-minute updates (memoized)
+  const summaryMetrics = useMemo(() => {
+    const totalPositions = positions.length;
+    const fiveMinInterval = Math.floor(Date.now() / 300000);
+    
+    const profitablePositions = positions.filter(pos => {
+      const baseVariation = ((pos.hour_slot % 3) - 1) * 1.5;
+      const timeVariation = (fiveMinInterval % 12) * 0.2;
+      const rtPrice = pos.da_price + baseVariation + timeVariation;
+      const pnl = (rtPrice - pos.da_price) * pos.quantity;
+      return pnl > 0;
+    }).length;
+    
+    const totalQuantity = positions.reduce((sum, pos) => sum + pos.quantity, 0);
+    const avgPrice = positions.length > 0 ? positions.reduce((sum, pos) => sum + pos.da_price, 0) / positions.length : 0;
+    
+    return { totalPositions, profitablePositions, totalQuantity, avgPrice };
+  }, [positions]);
 
   if (positionsLoading) {
     return (
@@ -212,16 +259,6 @@ const PositionsTable: React.FC = () => {
       </div>
     );
   }
-
-  // Calculate summary metrics using standard P&L formula
-  const totalPositions = positions.length;
-  const profitablePositions = positions.filter(pos => {
-    const rtPrice = pos.da_price + ((pos.hour_slot % 3) - 1) * 1.5 + (pos.hour_slot % 7) * 0.3;
-    const pnl = (rtPrice - pos.da_price) * pos.quantity;
-    return pnl > 0;
-  }).length;
-  const totalQuantity = positions.reduce((sum, pos) => sum + pos.quantity, 0);
-  const avgPrice = positions.length > 0 ? positions.reduce((sum, pos) => sum + pos.da_price, 0) / positions.length : 0;
 
   return (
     <div className="positions-table-container">
@@ -243,16 +280,16 @@ const PositionsTable: React.FC = () => {
           <div className="pnl-metric">
             <div className="pnl-metric-label">Positions</div>
             <div className="pnl-metric-value" style={{ color: 'white' }}>
-              {totalPositions}
+              {summaryMetrics.totalPositions}
             </div>
-            <div className="pnl-metric-change" style={{ color: profitablePositions > totalPositions/2 ? '#4CAF50' : '#f44336' }}>
-              {profitablePositions} profitable
+            <div className="pnl-metric-change" style={{ color: summaryMetrics.profitablePositions > summaryMetrics.totalPositions/2 ? '#4CAF50' : '#f44336' }}>
+              {summaryMetrics.profitablePositions} profitable
             </div>
           </div>
           <div className="pnl-metric">
             <div className="pnl-metric-label">Total Quantity</div>
             <div className="pnl-metric-value" style={{ color: 'white' }}>
-              {totalQuantity.toFixed(1)}
+              {summaryMetrics.totalQuantity.toFixed(1)}
             </div>
             <div className="pnl-metric-change" style={{ color: '#999' }}>
               MWh
@@ -261,7 +298,7 @@ const PositionsTable: React.FC = () => {
           <div className="pnl-metric">
             <div className="pnl-metric-label">Avg DA Price</div>
             <div className="pnl-metric-value" style={{ color: 'white' }}>
-              ${avgPrice.toFixed(2)}
+              ${summaryMetrics.avgPrice.toFixed(2)}
             </div>
             <div className="pnl-metric-change" style={{ color: '#999' }}>
               per MWh
@@ -313,6 +350,7 @@ const PositionsTable: React.FC = () => {
       <Table
         columns={columns}
         data={positions}
+        rowKey={(record) => record.id}
         pagination={pageSize >= 1000 ? false : {
           pageSize: pageSize,
           showTotal: true,
@@ -381,6 +419,9 @@ const PositionsTable: React.FC = () => {
       </Modal>
     </div>
   );
-};
+});
+
+// Set display name for better debugging
+PositionsTable.displayName = 'PositionsTable';
 
 export default PositionsTable;

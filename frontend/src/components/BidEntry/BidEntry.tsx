@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Form,
   InputNumber,
+  Input,
   Button,
   Select,
   DatePicker,
@@ -10,10 +11,9 @@ import {
   Popconfirm,
   Tag,
 } from '@arco-design/web-react';
-import { IconPlus, IconDelete, IconCopy } from '@arco-design/web-react/icon';
-import { useMutation } from '@tanstack/react-query';
-import { format, isAfter, isBefore, isSameDay, setHours, setMinutes, setSeconds } from 'date-fns';
-import dayjs from 'dayjs';
+import { IconPlus, IconDelete } from '@arco-design/web-react/icon';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAfter, isBefore, isSameDay, setHours, setMinutes, setSeconds } from 'date-fns';
 import { tradingAPI } from '../../services/api';
 import { Bid, BidSubmission } from '../../types/trading';
 import { formatHourSlot } from '../../utils/formatters';
@@ -23,15 +23,15 @@ const FormItem = Form.Item;
 
 interface BidEntryProps {
   selectedHour?: number | null;
-  onSubmitSuccess?: () => void;
 }
 
-const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) => {
+const BidEntry: React.FC<BidEntryProps> = ({ selectedHour }) => {
   const [form] = Form.useForm();
   const [bids, setBids] = useState<Bid[]>([]);
   const [tradingDay, setTradingDay] = useState<Date | null>(null);
   const [selectedHours, setSelectedHours] = useState<number[]>([]);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
+  const queryClient = useQueryClient();
 
   const isPastCutoff = () => {
     if (!tradingDay || !isSameDay(tradingDay, new Date())) return false;
@@ -54,7 +54,9 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
   }, [notification]);
 
   const showNotification = (type: 'success' | 'error' | 'warning', message: string) => {
-    setNotification({ type, message });
+    // Ensure message is always a string
+    const safeMessage = typeof message === 'string' ? message : 'Unknown error';
+    setNotification({ type, message: safeMessage });
   };
 
   const submitMutation = useMutation({
@@ -63,10 +65,32 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
       showNotification('success', `Successfully submitted ${data.accepted_bids?.length || 0} bids`);
       setBids([]);
       form.resetFields();
-      onSubmitSuccess?.();
+      // Refresh positions table after successful submission
+      queryClient.invalidateQueries({ queryKey: ['positions'] });
     },
     onError: (error: any) => {
-      showNotification('error', error.response?.data?.detail || 'Failed to submit bids');
+      // Log error only in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Bid submission error:', error);
+      }
+      
+      let errorMessage = 'Failed to submit bids';
+      
+      if (error.response?.data?.detail) {
+        // Handle Pydantic validation errors (arrays of error objects)
+        if (Array.isArray(error.response.data.detail)) {
+          const errors = error.response.data.detail.map((err: any) => err.msg).join(', ');
+          errorMessage = `Validation errors: ${errors}`;
+        } else if (typeof error.response.data.detail === 'string') {
+          errorMessage = error.response.data.detail;
+        } else {
+          errorMessage = JSON.stringify(error.response.data.detail);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showNotification('error', errorMessage);
     },
   });
 
@@ -78,9 +102,9 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     
     const missingFields = [];
     if (!tradingDay) missingFields.push('trading day');
-    if (!price || price <= 0) missingFields.push('price');
-    if (!quantity || quantity <= 0) missingFields.push('quantity');
-    if (selectedHours.length === 0 && !hourSlot && hourSlot !== 0) missingFields.push('hour slot');
+    if (!price || Number(price) <= 0) missingFields.push('price');
+    if (quantity === null || quantity === undefined || Number(quantity) === 0) missingFields.push('quantity');
+    if (selectedHours.length === 0 && (hourSlot === null || hourSlot === undefined)) missingFields.push('hour slot');
     
     if (missingFields.length > 0) {
       const fieldsList = missingFields.join(', ').replace(/,([^,]*)$/, ' and$1');
@@ -88,13 +112,32 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
       return;
     }
     
-    // Create bids
+    // Create bids - simple positive/negative quantities
     const hours = selectedHours.length > 0 ? selectedHours : [hourSlot];
-    const newBids = hours.map(hour => ({
-      hour_slot: hour,
-      price: price,
-      quantity: quantity,
-    }));
+    
+    const newBids = hours.map(hour => {
+      const hourNumber = Number(hour);
+      const priceNumber = Number(price);
+      const quantityNumber = Number(quantity);
+      
+      // Validate the numbers before creating bid
+      if (isNaN(hourNumber) || hourNumber < 0 || hourNumber > 23) {
+        throw new Error(`Invalid hour slot: ${hour}`);
+      }
+      if (isNaN(priceNumber) || priceNumber <= 0) {
+        throw new Error(`Invalid price: ${price}`);
+      }
+      if (isNaN(quantityNumber) || quantityNumber === 0) {
+        throw new Error(`Invalid quantity: ${quantity}`);
+      }
+      
+      const bid = {
+        hour_slot: hourNumber,
+        price: priceNumber,
+        quantity: quantityNumber,
+      };
+      return bid;
+    });
 
     // Check bid limits
     const hourCounts: Record<number, number> = {};
@@ -103,15 +146,16 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     });
 
     for (const [hour, count] of Object.entries(hourCounts)) {
-      if (count > 10) {
+      if (count >= 10) {
         showNotification('warning', `Maximum 10 bids allowed for hour ${hour}`);
         return;
       }
     }
 
+    
     // Add bids successfully
     setBids([...bids, ...newBids]);
-    form.resetFields(['price', 'quantity']);
+    form.resetFields(['price', 'quantity', 'hour_slot']);
     setSelectedHours([]);
     
     const bidCount = newBids.length;
@@ -138,12 +182,23 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
       return;
     }
 
-    const submission: BidSubmission = {
-      bids,
-      trading_day: tradingDay.toISOString(),
-    };
+    try {
+      const submission: BidSubmission = {
+        bids: bids.map(bid => ({
+          ...bid,
+          quantity: bid.quantity, // Preserve sign for buy/sell indication
+        })),
+        trading_day: tradingDay.toISOString(), // Full datetime format
+      };
 
-    submitMutation.mutate(submission);
+      submitMutation.mutate(submission);
+    } catch (error: any) {
+      // Log error only in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Submit error:', error);
+      }
+      showNotification('error', 'Failed to submit bids');
+    }
   };
 
   const handleClearAll = () => {
@@ -153,29 +208,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
     showNotification('success', 'All bids cleared');
   };
 
-  const handleBulkCopy = () => {
-    if (bids.length === 0) {
-      showNotification('warning', 'No bids to copy');
-      return;
-    }
-
-    const lastBid = bids[bids.length - 1];
-    const copiedBids: Bid[] = [];
-
-    for (let hour = 0; hour < 24; hour++) {
-      if (!bids.some(b => b.hour_slot === hour)) {
-        copiedBids.push({
-          ...lastBid,
-          hour_slot: hour,
-        });
-      }
-    }
-
-    if (copiedBids.length > 0) {
-      setBids([...bids, ...copiedBids]);
-      showNotification('success', `Copied bid to ${copiedBids.length} hours`);
-    }
-  };
 
   const columns = [
     {
@@ -196,7 +228,11 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
       title: 'Quantity (MWh)',
       dataIndex: 'quantity',
       key: 'quantity',
-      render: (qty: number) => qty.toFixed(2),
+      render: (qty: number) => (
+        <span style={{ color: qty < 0 ? '#ef4444' : '#22c55e' }}>
+          {qty > 0 ? '+' : ''}{qty.toFixed(2)} MWh ({qty > 0 ? 'Buy' : 'Sell'})
+        </span>
+      ),
     },
     {
       title: 'Total ($)',
@@ -228,7 +264,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
       {/* Notification */}
       {notification && (
         <div className={`notification notification-${notification.type}`}>
-          {notification.message}
+          {typeof notification.message === 'string' ? notification.message : 'Error occurred'}
         </div>
       )}
       
@@ -256,6 +292,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
             Past 11:00 AM cutoff for same-day trading. Select a future date.
           </div>
         )}
+
 
         {/* Hour Selection */}
         <FormItem
@@ -298,13 +335,31 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
           field="quantity"
         >
           <InputNumber
-            placeholder="Enter quantity"
+            placeholder="Enter quantity (+ for buy, - for sell)"
             suffix="MWh"
             precision={2}
-            min={0.1}
+            min={-999999}
+            max={999999}
+            step={0.1}
             style={{ width: '100%' }}
           />
         </FormItem>
+        
+        {/* Trading Instructions */}
+        <div style={{ 
+          background: '#0f1014', 
+          padding: '10px 12px', 
+          borderRadius: '4px', 
+          marginBottom: '16px',
+          border: '1px solid #2a2f3a'
+        }}>
+          <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '6px', fontWeight: 500 }}>
+            Trading Convention:
+          </div>
+          <div style={{ fontSize: '10px', color: '#9ca3af', lineHeight: '1.4' }}>
+            Positive quantities = Buy orders • Negative quantities = Sell orders
+          </div>
+        </div>
 
         {/* Action Buttons */}
         <Space>
@@ -314,13 +369,6 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
             onClick={handleAddBid}
           >
             Add Bid
-          </Button>
-          <Button
-            icon={<IconCopy />}
-            onClick={handleBulkCopy}
-            disabled={bids.length === 0}
-          >
-            Copy to All Hours
           </Button>
           <Button
             onClick={handleClearAll}
@@ -339,6 +387,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
           <Table
             columns={columns}
             data={bids}
+            rowKey={(record: Bid, index?: number) => `bid-${index}-${record.hour_slot}-${record.price}-${Math.abs(record.quantity)}`}
             pagination={false}
             size="small"
           />
@@ -359,9 +408,10 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
             size="large"
             onClick={handleSubmit}
             loading={submitMutation.isPending}
+            disabled={submitMutation.isPending || bids.length === 0}
             style={{ width: '100%', marginTop: 16 }}
           >
-            Submit All Bids
+            {submitMutation.isPending ? 'Submitting...' : 'Submit All Bids'}
           </Button>
         </div>
       )}

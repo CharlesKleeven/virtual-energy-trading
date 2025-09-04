@@ -5,33 +5,19 @@
  * Features change indicators and real-time updates.
  */
 
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Skeleton } from '@arco-design/web-react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { marketAPI } from '../../services/api';
 import './MarketStats.css';
 
-const MarketStats: React.FC = () => {
+const MarketStats: React.FC = memo(() => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['market-stats'],
     queryFn: marketAPI.getMarketStats,
     refetchInterval: 30000, // 30 seconds for more frequent updates
   });
-
-  if (isLoading) {
-    return (
-      <div className="market-stats-container">
-        <div className="market-stats-loading">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="stat-skeleton">
-              <Skeleton animation />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   const formatChange = (change: number) => {
     const sign = change >= 0 ? '+' : '';
@@ -48,12 +34,30 @@ const MarketStats: React.FC = () => {
     return price ? price.toFixed(2) : '0.00';
   };
 
-  // Calculate derived values
-  const currentDA = stats?.avg_price_24h || 0;
-  const currentRT = currentDA + 2.5; // Simulated RT price based on DA + typical spread
-  const spread = currentRT - currentDA;
-  const daChange = 1.2; // Simulated price change for demonstration
-  const rtChange = -0.8; // Simulated price change for demonstration
+  // Calculate derived values (memoized for performance) - must be called before early returns
+  const derivedValues = useMemo(() => {
+    const currentDA = stats?.avg_price_24h || 0;
+    const currentRT = currentDA + 2.5; // Simulated RT price based on DA + typical spread
+    const spread = currentRT - currentDA;
+    const daChange = 1.2; // Simulated price change for demonstration
+    const rtChange = -0.8; // Simulated price change for demonstration
+    
+    return { currentDA, currentRT, spread, daChange, rtChange };
+  }, [stats?.avg_price_24h]);
+
+  if (isLoading) {
+    return (
+      <div className="market-stats-container">
+        <div className="market-stats-loading">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="stat-skeleton">
+              <Skeleton animation />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="market-stats-container">
@@ -62,12 +66,12 @@ const MarketStats: React.FC = () => {
         <div className="stat-card">
           <div className="stat-header">
             <span className="stat-label">Day-Ahead</span>
-            <span className={`stat-change ${getChangeClass(daChange)}`}>
-              {formatChange(daChange)}
+            <span className={`stat-change ${getChangeClass(derivedValues.daChange)}`}>
+              {formatChange(derivedValues.daChange)}
             </span>
           </div>
           <div className="stat-value">
-            ${formatPrice(currentDA)}
+            ${formatPrice(derivedValues.currentDA)}
             <span className="stat-unit">/MWh</span>
           </div>
           <div className="stat-meta">
@@ -79,12 +83,12 @@ const MarketStats: React.FC = () => {
         <div className="stat-card">
           <div className="stat-header">
             <span className="stat-label">Real-Time</span>
-            <span className={`stat-change ${getChangeClass(rtChange)}`}>
-              {formatChange(rtChange)}
+            <span className={`stat-change ${getChangeClass(derivedValues.rtChange)}`}>
+              {formatChange(derivedValues.rtChange)}
             </span>
           </div>
           <div className="stat-value">
-            ${formatPrice(currentRT)}
+            ${formatPrice(derivedValues.currentRT)}
             <span className="stat-unit">/MWh</span>
           </div>
           <div className="stat-meta">
@@ -96,12 +100,12 @@ const MarketStats: React.FC = () => {
         <div className="stat-card">
           <div className="stat-header">
             <span className="stat-label">RT-DA Spread</span>
-            <span className={`stat-change ${getChangeClass(spread)}`}>
-              {spread > 0 ? 'PREMIUM' : spread < 0 ? 'DISCOUNT' : 'FLAT'}
+            <span className={`stat-change ${getChangeClass(derivedValues.spread)}`}>
+              {derivedValues.spread > 0 ? 'PREMIUM' : derivedValues.spread < 0 ? 'DISCOUNT' : 'FLAT'}
             </span>
           </div>
           <div className="stat-value">
-            ${formatPrice(Math.abs(spread))}
+            ${formatPrice(Math.abs(derivedValues.spread))}
             <span className="stat-unit">/MWh</span>
           </div>
           <div className="stat-meta">
@@ -149,6 +153,9 @@ const MarketStats: React.FC = () => {
       </div>
     </div>
   );
-};
+});
+
+// Set display name for better debugging
+MarketStats.displayName = 'MarketStats';
 
 export default MarketStats;

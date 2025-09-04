@@ -78,8 +78,23 @@ export const tradingAPI = {
    * Submit day-ahead bids
    */
   async submitBids(submission: BidSubmission): Promise<any> {
-    const response = await apiClient.post('/api/bids/submit', submission);
-    return response.data;
+    try {
+      // Log what we're sending to debug validation issues
+      console.log('Submitting bid data:', JSON.stringify(submission, null, 2));
+      
+      const response = await apiClient.post('/api/bids/submit', submission);
+      return response.data;
+    } catch (error: any) {
+      // Log the actual error for debugging
+      console.error('Full error details:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error code:', error.code);
+      console.error('Submission data was:', JSON.stringify(submission, null, 2));
+      
+      // Temporarily removed mock fallback to see real errors
+      throw error;
+    }
   },
 
   /**
@@ -139,6 +154,12 @@ class WebSocketManager {
 
       this.ws.onmessage = (event) => {
         try {
+          // Handle ping/pong messages which are plain text
+          if (event.data === 'pong') {
+            // Server responded to our ping, connection is alive
+            return;
+          }
+          
           const message = JSON.parse(event.data);
           this.notifyListeners('price_update', message);
         } catch (e) {

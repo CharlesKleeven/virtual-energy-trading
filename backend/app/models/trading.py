@@ -20,7 +20,7 @@ class Bid(BaseModel):
     id: Optional[str] = None
     hour_slot: int = Field(..., ge=0, le=23, description="Hour slot (0-23)")
     price: float = Field(..., gt=0, description="Price in $/MWh")
-    quantity: float = Field(..., gt=0, description="Quantity in MWh")
+    quantity: float = Field(..., ne=0, description="Quantity in MWh (positive=buy, negative=sell)")
     submitted_at: datetime = Field(default_factory=datetime.utcnow)
     status: BidStatus = BidStatus.PENDING
     

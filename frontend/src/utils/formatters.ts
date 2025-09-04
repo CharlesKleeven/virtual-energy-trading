@@ -6,7 +6,12 @@
  * Format hour slot for display (e.g., "14:00 - 15:00")
  */
 export const formatHourSlot = (hour: number): string => {
-  return `${hour}:00 - ${hour + 1}:00`;
+  // Handle invalid hour values
+  if (isNaN(hour) || hour < 0 || hour > 23) {
+    console.error('Invalid hour slot:', hour);
+    return 'Invalid Hour';
+  }
+  return `${hour.toString().padStart(2, '0')}:00 - ${(hour + 1).toString().padStart(2, '0')}:00`;
 };
 
 /**
