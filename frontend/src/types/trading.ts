@@ -56,14 +56,3 @@ export interface MarketStats {
   last_update: string;
 }
 
-export interface WebSocketMessage {
-  type: 'price_update' | 'position_update' | 'error';
-  data: any;
-}
-
-export interface ChartDataPoint {
-  time: string;
-  price: number;
-  hour: number;
-  label?: string;
-}

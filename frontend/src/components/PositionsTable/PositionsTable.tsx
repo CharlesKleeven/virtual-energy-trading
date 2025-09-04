@@ -23,6 +23,7 @@ import { format, parseISO } from 'date-fns';
 import { tradingAPI, wsManager } from '../../services/api';
 import { Position, PnLCalculation } from '../../types/trading';
 import { formatHourSlot } from '../../utils/formatters';
+import { calculateMockRtPrice, calculateMockPositionPnL, generateMockPnLDetails } from '../../utils/pnlCalculations';
 import './PositionsTable.css';
 
 const PositionsTable: React.FC = memo(() => {
@@ -59,22 +60,16 @@ const PositionsTable: React.FC = memo(() => {
   const showPnLDetails = useCallback(async (position: Position) => {
     setSelectedPosition(position);
     
-    // Calculate P&L using market formula: (RT_price - DA_price) × quantity for each 5-min interval
-    const baseRtPrice = position.da_price + ((position.hour_slot % 3) - 1) * 1.5;
-    const rtPrices = Array.from({ length: 12 }, (_, i) => 
-      baseRtPrice + (Math.sin(i * 0.5) * 0.8) + (position.hour_slot % 7) * 0.3
-    );
-    const intervalPnL = rtPrices.map(rtPrice => (rtPrice - position.da_price) * position.quantity);
-    
+    const mockDetails = generateMockPnLDetails(position);
     const calculatedPnL: PnLCalculation = {
       position_id: position.id,
       hour_slot: position.hour_slot,
       quantity: position.quantity,
       da_price: position.da_price,
       timestamp: position.trading_day,
-      rt_prices: rtPrices,
-      interval_pnl: intervalPnL,
-      total_pnl: intervalPnL.reduce((sum, pnl) => sum + pnl, 0) / 12 // Average for the hour
+      rt_prices: mockDetails.rt_prices,
+      interval_pnl: mockDetails.interval_pnl,
+      total_pnl: mockDetails.total_pnl
     };
     setDetailedPnL(calculatedPnL);
   }, []);
@@ -83,12 +78,8 @@ const PositionsTable: React.FC = memo(() => {
   const exportToCSV = useCallback(() => {
     const headers = ['Trading Day', 'Hour', 'Quantity (MWh)', 'Type', 'DA Price', 'RT Price', 'P&L'];
     const rows = positions.map((pos: Position, index: number) => {
-      // Calculate P&L using standard formula with 5-minute updates
-      const fiveMinInterval = Math.floor(Date.now() / 300000);
-      const baseVariation = ((pos.hour_slot % 3) - 1) * 1.5;
-      const timeVariation = (fiveMinInterval % 12) * 0.2;
-      const rtPrice = pos.da_price + baseVariation + timeVariation;
-      const pnl = (rtPrice - pos.da_price) * pos.quantity;
+      const rtPrice = calculateMockRtPrice(pos.da_price, pos.hour_slot);
+      const pnl = calculateMockPositionPnL(pos);
       return [
         format(parseISO(pos.trading_day), 'yyyy-MM-dd'),
         `HE ${pos.hour_slot}`,
@@ -161,11 +152,7 @@ const PositionsTable: React.FC = memo(() => {
       title: 'Current RT Price',
       key: 'rt_price',
       render: (_: any, record: Position, index: number) => {
-        // Calculate simulated RT price with 5-minute updates
-        const fiveMinInterval = Math.floor(Date.now() / 300000); // Updates every 5 minutes
-        const baseVariation = ((record.hour_slot % 3) - 1) * 1.5;
-        const timeVariation = (fiveMinInterval % 12) * 0.2; // 12 intervals per hour
-        const rtPrice = record.da_price + baseVariation + timeVariation;
+        const rtPrice = calculateMockRtPrice(record.da_price, record.hour_slot);
         return (
           <span style={{ color: rtPrice > record.da_price ? '#22c55e' : '#ef4444' }}>
             ${rtPrice.toFixed(2)}
@@ -177,26 +164,12 @@ const PositionsTable: React.FC = memo(() => {
       title: 'P&L',
       key: 'pnl',
       sorter: (a: Position, b: Position) => {
-        // Use consistent P&L calculation for sorting with 5-minute updates
-        const fiveMinInterval = Math.floor(Date.now() / 300000);
-        const baseVariationA = ((a.hour_slot % 3) - 1) * 1.5;
-        const timeVariation = (fiveMinInterval % 12) * 0.2;
-        const rtPriceA = a.da_price + baseVariationA + timeVariation;
-        const baseVariationB = ((b.hour_slot % 3) - 1) * 1.5;
-        const rtPriceB = b.da_price + baseVariationB + timeVariation;
-        const pnlA = (rtPriceA - a.da_price) * a.quantity;
-        const pnlB = (rtPriceB - b.da_price) * b.quantity;
+        const pnlA = calculateMockPositionPnL(a);
+        const pnlB = calculateMockPositionPnL(b);
         return pnlA - pnlB;
       },
       render: (_: any, record: Position, index: number) => {
-        // Calculate P&L using standard formula: (RT_price - DA_price) × quantity
-        // RT price updates every 5 minutes
-        const fiveMinInterval = Math.floor(Date.now() / 300000);
-        const baseVariation = ((record.hour_slot % 3) - 1) * 1.5;
-        const timeVariation = (fiveMinInterval % 12) * 0.2;
-        const rtPrice = record.da_price + baseVariation + timeVariation;
-        const priceDiff = rtPrice - record.da_price;
-        const totalPnL = priceDiff * record.quantity;
+        const totalPnL = calculateMockPositionPnL(record);
         const color = totalPnL >= 0 ? '#3fb950' : '#f85149';
         return (
           <span style={{ color, fontWeight: 600 }}>
@@ -221,29 +194,19 @@ const PositionsTable: React.FC = memo(() => {
     },
   ], [showPnLDetails]);
 
-  // Calculate total P&L using standard formula: (RT_price - DA_price) × quantity (memoized)
+  // Calculate total P&L using mock calculation (memoized)
   const totalPnL = useMemo(() => {
     return positions.reduce((sum, position) => {
-      const fiveMinInterval = Math.floor(Date.now() / 300000);
-      const baseVariation = ((position.hour_slot % 3) - 1) * 1.5;
-      const timeVariation = (fiveMinInterval % 12) * 0.2;
-      const rtPrice = position.da_price + baseVariation + timeVariation;
-      const pnl = (rtPrice - position.da_price) * position.quantity;
-      return sum + pnl;
+      return sum + calculateMockPositionPnL(position);
     }, 0);
   }, [positions]);
 
-  // Calculate summary metrics using consistent P&L formula with 5-minute updates (memoized)
+  // Calculate summary metrics using mock P&L calculation (memoized)
   const summaryMetrics = useMemo(() => {
     const totalPositions = positions.length;
-    const fiveMinInterval = Math.floor(Date.now() / 300000);
     
     const profitablePositions = positions.filter(pos => {
-      const baseVariation = ((pos.hour_slot % 3) - 1) * 1.5;
-      const timeVariation = (fiveMinInterval % 12) * 0.2;
-      const rtPrice = pos.da_price + baseVariation + timeVariation;
-      const pnl = (rtPrice - pos.da_price) * pos.quantity;
-      return pnl > 0;
+      return calculateMockPositionPnL(pos) > 0;
     }).length;
     
     const totalQuantity = positions.reduce((sum, pos) => sum + pos.quantity, 0);

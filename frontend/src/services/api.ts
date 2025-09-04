@@ -78,23 +78,8 @@ export const tradingAPI = {
    * Submit day-ahead bids
    */
   async submitBids(submission: BidSubmission): Promise<any> {
-    try {
-      // Log what we're sending to debug validation issues
-      console.log('Submitting bid data:', JSON.stringify(submission, null, 2));
-      
-      const response = await apiClient.post('/api/bids/submit', submission);
-      return response.data;
-    } catch (error: any) {
-      // Log the actual error for debugging
-      console.error('Full error details:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      console.error('Error code:', error.code);
-      console.error('Submission data was:', JSON.stringify(submission, null, 2));
-      
-      // Temporarily removed mock fallback to see real errors
-      throw error;
-    }
+    const response = await apiClient.post('/api/bids/submit', submission);
+    return response.data;
   },
 
   /**
@@ -107,21 +92,6 @@ export const tradingAPI = {
     return response.data.data;
   },
 
-  /**
-   * Calculate P&L for a position
-   */
-  async calculatePositionPnL(positionId: string): Promise<PnLCalculation> {
-    const response = await apiClient.get(`/api/pnl/calculate/${positionId}`);
-    return response.data.data;
-  },
-
-  /**
-   * Calculate portfolio P&L
-   */
-  async calculatePortfolioPnL(): Promise<any> {
-    const response = await apiClient.get('/api/pnl/portfolio');
-    return response.data.data;
-  }
 };
 
 /**
