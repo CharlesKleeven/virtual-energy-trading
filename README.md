@@ -19,7 +19,7 @@ Visit http://localhost:3000
 ## Core Features
 
 - **Day-Ahead Market Simulation**: Submit up to 10 bids per hour slot, 11am cutoff enforced
-- **Real-Time P&L Tracking**: `(RTM_price - DAM_price) × quantity` at 5-minute intervals
+- **Real-Time P&L Tracking**: Sum of 12 intervals: `Σ((RTM_price - DAM_price) × quantity)` for each 5-min in the hour
 - **Live CAISO Data**: GridStatus.io API integration for authentic market prices
 - **Interactive Visualizations**: Price charts with zoom, market statistics dashboard
 - **Position Management**: Track multiple positions with sortable table and CSV export
@@ -39,4 +39,4 @@ React, TypeScript, Arco Design, FastAPI, GridStatus.io
 - **11am Cutoff**: Same-day DAM bids must be submitted before 11am PST
 - **10 Bid Limit**: Maximum 10 bids allowed per hour slot
 - **Small Trader**: Assumes bids don't move market prices
-- **P&L Formula**: Profit/loss = (Real_Time_Price - Day_Ahead_Price) × Quantity
+- **P&L Formula**: Sum of 12 five-minute intervals within each hour: Σ((RTM_price - DAM_price) × Quantity)

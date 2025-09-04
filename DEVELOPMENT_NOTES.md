@@ -50,20 +50,22 @@ Energy markets update every 5 minutes. Need WebSocket for real-time feel but HTT
 **UX insight**: Better to guide users toward working combinations than let them discover failures
 
 ### 11am Cutoff Rule
-This was trickier than it looked. Can't just check if it's before 11am because:
+Can't just check if it's before 11am because:
 - Which timezone? (CAISO is Pacific)
-- What about submitting for tomorrow vs today?
-- Daylight savings?
 
 **My solution**: Proper timezone handling with clear validation messages. Frontend shows immediate feedback, backend enforces the rule.
 
 ### P&L Calculations
-Core formula is simple: `(RTM_price - DAM_price) × quantity`
+Core formula: **Sum of 12 five-minute intervals** within each hourly DAM contract.
 
-But implementation details matter:
-- What about negative prices? (Yes, energy can be negative)
-- How do you aggregate 5-minute RTM data into hourly DAM positions?
-- How do you show this clearly to traders?
+Each interval: `(RTM_price - DAM_price) × quantity`
+Total P&L: `Σ((RTM_price - DAM_price) × quantity)` for all 12 five-minute periods
+
+**Key implementation details**:
+- Each hourly DAM contract is offset 12 times (every 5 minutes during the hour)
+- We SUM all 12 individual P&L calculations (not average them)
+- Handles negative energy prices correctly
+- Shows interval-by-interval breakdown for transparency
 
 **My approach**: Keep the math simple and transparent. Show the breakdown so users understand where numbers come from.
 
@@ -106,7 +108,7 @@ But implementation details matter:
 1. **Correct P&L math** - This is the core value proposition
 2. **11am cutoff enforcement** - Critical business rule
 3. **Real market data integration** - Shows API skills
-4. **Professional UI** - Needs to look like something traders would use
+4. **Simple, Clean UI** - Needs to look like something traders would use
 
 ### Nice-to-haves I included
 - CSV export for data analysis
