@@ -191,8 +191,8 @@ class TradingEngine:
         interval_pnl = [(rt_price - position.da_price) * position.quantity 
                         for rt_price in hour_prices]
         
-        # Total P&L is sum of all intervals (divided by 12 for per-interval average)
-        total_pnl = sum(interval_pnl) / len(interval_pnl) if interval_pnl else 0
+        # Total P&L is sum of all intervals (offsetting entire hourly contract)
+        total_pnl = sum(interval_pnl) if interval_pnl else 0
         
         return PnLCalculation(
             position_id=position_id,

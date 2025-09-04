@@ -128,9 +128,8 @@ class TestPnLCalculations:
         # Calculate P&L
         pnl = await trading_engine.calculate_pnl(sample_position.id, rt_prices)
         
-        # Calculate expected P&L
-        avg_rt_price = sum(rt_price_values) / len(rt_price_values)
-        expected_pnl = (avg_rt_price - 45.0) * 50.0
+        # Calculate expected P&L - sum of all 12 intervals (not average)
+        expected_pnl = sum((rt_price - 45.0) * 50.0 for rt_price in rt_price_values)
         
         assert abs(pnl.total_pnl - expected_pnl) < 0.01
         assert len(pnl.interval_pnl) == 12
