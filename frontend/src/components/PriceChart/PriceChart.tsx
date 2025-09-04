@@ -31,6 +31,22 @@ interface PriceChartProps {
 const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) => {
   const [viewMode, setViewMode] = React.useState<'dam' | 'rtm' | 'both'>('both');
   const [timeframe, setTimeframe] = React.useState<'1D' | '7D' | '30D'>('7D');
+  
+  // Get available timeframes based on view mode
+  const availableTimeframes = React.useMemo(() => {
+    if (viewMode === 'dam') {
+      return ['1D', '7D', '30D'];
+    } else {
+      return ['1D', '7D']; // RTM and Both limited to avoid overload
+    }
+  }, [viewMode]);
+  
+  // Reset timeframe if current one isn't available
+  React.useEffect(() => {
+    if (!availableTimeframes.includes(timeframe)) {
+      setTimeframe('7D');
+    }
+  }, [availableTimeframes, timeframe]);
 
   // Get days based on timeframe
   const days = timeframe === '1D' ? 1 : timeframe === '7D' ? 7 : 30;
@@ -42,11 +58,12 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
     refetchInterval: 300000, // 5 minutes
   });
 
-  // Fetch RTM prices
+  // Fetch RTM prices (only when needed by view mode)
   const { data: rtmPrices, isLoading: rtmLoading } = useQuery({
     queryKey: ['rtm-prices', days],
     queryFn: () => marketAPI.getRealtimePrices(days * 24),
     refetchInterval: 300000, // 5 minutes
+    enabled: viewMode === 'rtm' || viewMode === 'both',
   });
 
   // Process and combine price data
@@ -148,17 +165,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
       {/* Enhanced Chart Header */}
       <div className="chart-header">
         <div className="chart-controls">
-          <div className="timeframe-selector">
-            {['1D', '7D', '30D'].map((tf) => (
-              <button
-                key={tf}
-                className={`timeframe-btn ${timeframe === tf ? 'active' : ''}`}
-                onClick={() => setTimeframe(tf as any)}
-              >
-                {tf}
-              </button>
-            ))}
-          </div>
           <div className="view-mode-selector">
             {['dam', 'rtm', 'both'].map((mode) => (
               <button
@@ -167,6 +173,17 @@ const PriceChart: React.FC<PriceChartProps> = ({ onHourSelect, selectedHour }) =
                 onClick={() => setViewMode(mode as any)}
               >
                 {mode === 'dam' ? 'DAM' : mode === 'rtm' ? 'RTM' : 'Both'}
+              </button>
+            ))}
+          </div>
+          <div className="timeframe-selector">
+            {availableTimeframes.map((tf) => (
+              <button
+                key={tf}
+                className={`timeframe-btn ${timeframe === tf ? 'active' : ''}`}
+                onClick={() => setTimeframe(tf as any)}
+              >
+                {tf}
               </button>
             ))}
           </div>

@@ -12,7 +12,8 @@ import {
 } from '@arco-design/web-react';
 import { IconPlus, IconDelete, IconCopy } from '@arco-design/web-react/icon';
 import { useMutation } from '@tanstack/react-query';
-import dayjs, { Dayjs } from 'dayjs';
+import { format, isAfter, isBefore, isSameDay, setHours, setMinutes, setSeconds } from 'date-fns';
+import dayjs from 'dayjs';
 import { tradingAPI } from '../../services/api';
 import { Bid, BidSubmission } from '../../types/trading';
 import { formatHourSlot } from '../../utils/formatters';
@@ -28,14 +29,14 @@ interface BidEntryProps {
 const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) => {
   const [form] = Form.useForm();
   const [bids, setBids] = useState<Bid[]>([]);
-  const [tradingDay, setTradingDay] = useState<Dayjs | null>(null);
+  const [tradingDay, setTradingDay] = useState<Date | null>(null);
   const [selectedHours, setSelectedHours] = useState<number[]>([]);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
 
   const isPastCutoff = () => {
-    if (!tradingDay || !tradingDay.isSame(dayjs(), 'day')) return false;
-    const cutoff = dayjs().hour(11).minute(0).second(0);
-    return dayjs().isAfter(cutoff);
+    if (!tradingDay || !isSameDay(tradingDay, new Date())) return false;
+    const cutoff = setSeconds(setMinutes(setHours(new Date(), 11), 0), 0);
+    return isAfter(new Date(), cutoff);
   };
 
   useEffect(() => {
@@ -139,7 +140,7 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
 
     const submission: BidSubmission = {
       bids,
-      trading_day: tradingDay.toDate().toISOString(),
+      trading_day: tradingDay.toISOString(),
     };
 
     submitMutation.mutate(submission);
@@ -244,8 +245,8 @@ const BidEntry: React.FC<BidEntryProps> = ({ selectedHour, onSubmitSuccess }) =>
           <DatePicker
             style={{ width: '100%' }}
             value={tradingDay || undefined}
-            onChange={(dateString, date) => setTradingDay(date || null)}
-            disabledDate={(date) => date && date.isBefore(dayjs(), 'day')}
+            onChange={(dateString, date) => setTradingDay(date ? date.toDate() : null)}
+            disabledDate={(date) => date && isBefore(date.toDate(), new Date())}
             placeholder="Select trading day"
           />
         </FormItem>
