@@ -40,6 +40,15 @@ Energy markets update every 5 minutes. Need WebSocket for real-time feel but HTT
 
 **Key insight**: Always plan for network issues. WebSocket connections fail, APIs go down, connectivity varies.
 
+### RTM Data Overload Problem
+30 days of RTM data at 5-minute intervals = 8,640 data points. This was overwhelming both the API and chart rendering.
+
+**Challenge**: Users couldn't load 30D view when RTM was selected
+**Root cause**: Too much data for browser and API to handle efficiently
+**Solution**: Dynamic UI that limits RTM/Both modes to 1D and 7D only, with 30D available for DAM-only analysis
+
+**UX insight**: Better to guide users toward working combinations than let them discover failures
+
 ### 11am Cutoff Rule
 This was trickier than it looked. Can't just check if it's before 11am because:
 - Which timezone? (CAISO is Pacific)
@@ -74,6 +83,17 @@ But implementation details matter:
 
 **Layout rationale**: Mirrors actual trader workflow - monitor prices, enter orders, track P&L.
 
+### Dynamic Chart Controls
+**Decision**: Restructured controls with view mode first, then timeframes
+**Why**: Prevents data overload by limiting timeframe options based on selected data type
+
+**Flow**: 
+1. Select DAM/RTM/Both (determines data complexity)
+2. Available timeframes appear (1D/7D/30D for DAM, 1D/7D for RTM/Both)
+3. Chart loads appropriate amount of data
+
+**Result**: No more mysterious loading failures, clearer user guidance
+
 ### Form Design
 **Challenge**: Arco Design's validation caused app crashes
 **Solution**: Manual validation with user-friendly notifications instead of error states
@@ -90,7 +110,7 @@ But implementation details matter:
 
 ### Nice-to-haves I included
 - CSV export for data analysis
-- Multiple timeframes (1D/7D/30D)
+- Dynamic timeframes (1D/7D for RTM, 1D/7D/30D for DAM)
 - Real-time updates via WebSocket
 - Responsive design
 
